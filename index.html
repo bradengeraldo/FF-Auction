@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fantasy Football Auction Draft Simulator</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #334155;
+    --border: #475569;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #22d3ee;
+    --accent-2: #06b6d4;
+    --good: #4ade80;
+    --bad: #f87171;
+    --warn: #fbbf24;
+    --user: #f472b6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4 { margin: 0 0 8px 0; }
+  button {
+    background: var(--accent);
+    color: #0f172a;
+    border: 0;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  button:hover:not(:disabled) { background: var(--accent-2); }
+  button:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
+  button.secondary { background: var(--panel-2); color: var(--text); }
+  button.secondary:hover:not(:disabled) { background: var(--border); }
+  button.bid { background: var(--good); color: #052e16; }
+  button.bid:hover:not(:disabled) { background: #86efac; }
+  button.pass { background: var(--bad); color: #450a0a; }
+  button.pass:hover:not(:disabled) { background: #fca5a5; }
+  input, select {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); }
+
+  .screen { display: none; padding: 20px; max-width: 1700px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* SETUP */
+  #screen-setup { max-width: 720px; }
+  #screen-setup .card {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  .row label { min-width: 160px; color: var(--muted); }
+
+  /* DRAFT */
+  .draft-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    gap: 14px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) { .draft-grid { grid-template-columns: 260px 1fr; } .col-teams { grid-column: 1 / span 2; } }
+
+  .panel {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .panel h3 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .topbar .stat { font-size: 13px; color: var(--muted); }
+  .topbar .stat strong { color: var(--text); font-size: 16px; margin-left: 6px; }
+
+  /* Auction center */
+  .auction-stage {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    min-height: 320px;
+  }
+  .nomination-banner {
+    background: var(--panel-2);
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .player-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: rgba(34, 211, 238, 0.05);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .player-card .name { font-size: 22px; font-weight: 700; }
+  .player-card .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .player-card .stats { text-align: right; font-size: 13px; color: var(--muted); }
+
+  .bid-display {
+    text-align: center;
+    padding: 18px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .bid-amount { font-size: 48px; font-weight: 800; color: var(--good); margin: 6px 0; }
+  .bid-holder { font-size: 16px; color: var(--text); }
+  .bid-timer { font-size: 14px; color: var(--warn); margin-top: 4px; }
+
+  .bid-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Nomination UI */
+  #nominate-panel { background: var(--panel-2); padding: 14px; border-radius: 8px; }
+  .player-search-results {
+    max-height: 360px;
+    overflow-y: auto;
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .player-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .player-row:hover { background: var(--panel); }
+  .player-row .pos { font-weight: 700; color: var(--accent); }
+  .player-row .val { color: var(--good); text-align: right; font-variant-numeric: tabular-nums; }
+  .player-row button { padding: 4px 8px; font-size: 12px; }
+  .player-row.disabled { opacity: 0.45; }
+  .player-row.disabled button { display: none; }
+
+  /* Teams panel */
+  .team-card {
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-left: 4px solid transparent;
+    font-size: 12px;
+  }
+  .team-card.user { border-left-color: var(--user); }
+  .team-card.nominating { border-left-color: var(--accent); }
+  .team-card.bidding { box-shadow: 0 0 0 2px var(--good); }
+  .team-card .top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .team-card .name { font-weight: 700; }
+  .team-card .money { font-weight: 700; color: var(--good); }
+  .team-card .roster { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .team-card .pos-pill { display: inline-block; background: var(--panel); padding: 1px 6px; border-radius: 3px; margin-right: 4px; font-size: 10px; }
+
+  /* Log */
+  .log {
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .log .entry { padding: 2px 0; }
+  .log .entry.win { color: var(--good); }
+  .log .entry.bid { color: var(--accent); }
+  .log .entry.nom { color: var(--warn); }
+  .log .entry.pass { color: var(--muted); }
+  .log .entry.user { color: var(--user); font-weight: 600; }
+  .log .entry.system { color: var(--muted); font-style: italic; }
+
+  /* User roster table */
+  .roster-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .roster-table th, .roster-table td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  .roster-table th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; }
+  .roster-table .slot { color: var(--muted); width: 50px; }
+  .roster-table .price { text-align: right; color: var(--good); }
+
+  /* Results */
+  #screen-results .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .result-team {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .result-team.user { border-color: var(--user); }
+  .result-team h3 { margin-bottom: 10px; }
+  .result-team table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .result-team td { padding: 3px 4px; border-bottom: 1px solid var(--border); }
+  .result-team td.price { text-align: right; color: var(--good); }
+  .results-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel);
+    padding: 10px 14px;
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    max-width: 360px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 100;
+    font-size: 13px;
+  }
+
+  .badge { background: var(--panel); padding: 2px 6px; border-radius: 10px; font-size: 11px; color: var(--muted); margin-left: 6px; }
+  .pulse { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity: 0.5 } }
+
+  /* Ad slot */
+  .ad-slot {
+    margin: 24px 0 8px 0;
+    display: flex;
+    justify-content: center;
+  }
+  .ad-slot-inner {
+    width: 300px;
+    height: 250px;
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    overflow: hidden;
+  }
+  .ad-slot-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .ad-slot-size {
+    font-size: 13px;
+    margin-top: 4px;
+    color: var(--text);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== SETUP SCREEN ========== -->
+<div id="screen-setup" class="screen active">
+  <h1>Fantasy Football Auction Draft Simulator</h1>
+  <p style="color: var(--muted)">12 teams &middot; $200 budget &middot; 16-player rosters &middot; you control one team</p>
+
+  <div class="card">
+    <h3>Your Team</h3>
+    <div class="row">
+      <label>Team name</label>
+      <input id="user-team-name" type="text" value="Your Team" maxlength="32" style="flex:1; max-width:340px">
+    </div>
+    <div class="row">
+      <label>Your email (for results)</label>
+      <input id="user-email" type="email" placeholder="you@example.com" style="flex:1; max-width:340px">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>League Settings</h3>
+    <div class="row">
+      <label>Bid pace</label>
+      <select id="bid-speed">
+        <option value="2000">Realtime — 2 sec per bid</option>
+        <option value="0">Instant — computer bids resolve immediately</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Nomination timer (user)</label>
+      <select id="nom-timer-len">
+        <option value="30">30 seconds (default)</option>
+        <option value="60">60 seconds</option>
+        <option value="0">No timer</option>
+      </select>
+    </div>
+    <div class="row" style="color: var(--muted); font-size: 12px">
+      <span>Starters: 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX, 1 DST, 1 K &nbsp;&middot;&nbsp; Max per pos: 2 QB / 8 RB / 8 WR / 2 TE / 1 DST / 1 K</span>
+    </div>
+  </div>
+
+  <button id="start-draft-btn" style="font-size:16px; padding: 12px 24px">Start Draft</button>
+  <div id="setup-error" style="color: var(--bad); margin-top: 10px"></div>
+
+  <!-- Ad slot (300x250 medium rectangle) -->
+  <div class="ad-slot" aria-label="Advertisement">
+    <div class="ad-slot-inner" id="ad-slot-setup">
+      <span class="ad-slot-label">Advertisement</span>
+      <span class="ad-slot-size">300 &times; 250</span>
+      <!-- Drop your ad tag (e.g., Google AdSense <ins> block) inside this div -->
+    </div>
+  </div>
+</div>
+
+<!-- ========== DRAFT SCREEN ========== -->
+<div id="screen-draft" class="screen">
+  <div class="topbar">
+    <div>
+      <div class="stat">PICK <strong id="pick-num">1</strong> / 192</div>
+      <div class="stat">NOMINATING <strong id="nominator-name">—</strong></div>
+    </div>
+    <div>
+      <div class="stat">YOUR BUDGET <strong id="user-budget" style="color: var(--good)">$200</strong></div>
+      <div class="stat">YOUR SLOTS LEFT <strong id="user-slots">16</strong></div>
+      <div class="stat">MAX BID YOU CAN MAKE <strong id="user-maxbid" style="color: var(--warn)">$185</strong></div>
+    </div>
+    <div>
+      <button class="secondary" id="pause-btn">Pause</button>
+      <button class="secondary" id="speed-toggle">Pace: Realtime</button>
+      <button class="secondary" id="end-draft-btn">Auto-Finish Draft</button>
+    </div>
+  </div>
+
+  <div class="draft-grid">
+    <!-- LEFT: nomination / search -->
+    <div class="col-nominate">
+      <div class="panel" id="nominate-panel">
+        <h3 id="nominate-header">Available Players</h3>
+        <input id="player-search" type="text" placeholder="Search players…" style="width:100%">
+        <select id="pos-filter" style="width:100%; margin-top:6px">
+          <option value="ALL">All positions</option>
+          <option value="QB">QB</option>
+          <option value="RB">RB</option>
+          <option value="WR">WR</option>
+          <option value="TE">TE</option>
+          <option value="DST">DST</option>
+          <option value="K">K</option>
+        </select>
+        <div id="player-search-results" class="player-search-results"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h3>Your Roster</h3>
+        <table class="roster-table" id="user-roster-table">
+          <thead><tr><th class="slot">Slot</th><th>Player</th><th class="price">$</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CENTER: live auction -->
+    <div class="col-auction">
+      <div class="auction-stage" id="auction-stage">
+        <div class="nomination-banner" id="nom-banner">
+          <span id="nom-banner-text">Waiting for first nomination…</span>
+          <span id="nom-banner-timer"></span>
+        </div>
+        <div id="auction-content">
+          <p style="text-align:center; color: var(--muted); padding: 40px 0">
+            The draft is starting…
+          </p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h3>Draft Log</h3>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: all teams -->
+    <div class="col-teams">
+      <div class="panel">
+        <h3>Teams</h3>
+        <div id="teams-list"></div>
+      </div>
+
+      <!-- Ad slot (300x250 medium rectangle) -->
+      <div class="ad-slot" aria-label="Advertisement">
+        <div class="ad-slot-inner" id="ad-slot-draft">
+          <span class="ad-slot-label">Advertisement</span>
+          <span class="ad-slot-size">300 &times; 250</span>
+          <!-- Drop your ad tag (e.g., Google AdSense <ins> block) inside this div -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== RESULTS SCREEN ========== -->
+<div id="screen-results" class="screen">
+  <h1>Draft Results</h1>
+  <div class="results-actions">
+    <button id="email-results-btn">Email Results</button>
+    <button class="secondary" id="csv-download-btn">Download CSV</button>
+    <button class="secondary" id="new-draft-btn">New Draft</button>
+  </div>
+  <div id="results-summary" style="color: var(--muted); margin-bottom: 14px"></div>
+  <div class="results-grid" id="results-grid"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ============================================================
+   PLAYER DATABASE (embedded from Auction Value Database.xlsx)
+   ============================================================ */
+const PLAYERS_DB = [{"name":"Bijan Robinson","team":"ATL","pos":"RB","posRank":"RB1","baseValue":69.2,"stdDev":5.033},{"name":"Jahmyr Gibbs","team":"DET","pos":"RB","posRank":"RB2","baseValue":66.6,"stdDev":6.11},{"name":"Puka Nacua","team":"LAR","pos":"WR","posRank":"WR2","baseValue":65.76,"stdDev":7.638},{"name":"Ja'Marr Chase","team":"CIN","pos":"WR","posRank":"WR1","baseValue":64.96,"stdDev":3.215},{"name":"Christian McCaffrey","team":"SF","pos":"RB","posRank":"RB3","baseValue":64.4,"stdDev":4.041},{"name":"Jaxon Smith-Njigba","team":"SEA","pos":"WR","posRank":"WR3","baseValue":63.16,"stdDev":9.292},{"name":"Jonathan Taylor","team":"IND","pos":"RB","posRank":"RB4","baseValue":60.96,"stdDev":7.0},{"name":"Justin Jefferson","team":"MIN","pos":"WR","posRank":"WR6","baseValue":54.16,"stdDev":2.646},{"name":"James Cook III","team":"BUF","pos":"RB","posRank":"RB5","baseValue":52.8,"stdDev":7.234},{"name":"Amon-Ra St. Brown","team":"DET","pos":"WR","posRank":"WR4","baseValue":51.6,"stdDev":4.359},{"name":"CeeDee Lamb","team":"DAL","pos":"WR","posRank":"WR5","baseValue":50.0,"stdDev":2.517},{"name":"Drake London","team":"ATL","pos":"WR","posRank":"WR7","baseValue":49.2,"stdDev":1.0},{"name":"De'Von Achane","team":"MIA","pos":"RB","posRank":"RB6","baseValue":49.0,"stdDev":2.887},{"name":"Saquon Barkley","team":"PHI","pos":"RB","posRank":"RB9","baseValue":44.6,"stdDev":2.646},{"name":"Nico Collins","team":"HOU","pos":"WR","posRank":"WR8","baseValue":42.8,"stdDev":3.464},{"name":"Derrick Henry","team":"BAL","pos":"RB","posRank":"RB12","baseValue":41.91,"stdDev":9.644},{"name":"Josh Jacobs","team":"GB","pos":"RB","posRank":"RB14","baseValue":41.31,"stdDev":2.0},{"name":"Ashton Jeanty","team":"LV","pos":"RB","posRank":"RB7","baseValue":40.91,"stdDev":2.082},{"name":"Malik Nabers","team":"NYG","pos":"WR","posRank":"WR10","baseValue":40.68,"stdDev":6.429},{"name":"Chase Brown","team":"CIN","pos":"RB","posRank":"RB8","baseValue":39.2,"stdDev":4.163},{"name":"Rashee Rice","team":"KC","pos":"WR","posRank":"WR9","baseValue":36.2,"stdDev":8.963},{"name":"George Pickens","team":"DAL","pos":"WR","posRank":"WR11","baseValue":35.4,"stdDev":3.0},{"name":"A.J. Brown","team":"PHI","pos":"WR","posRank":"WR13","baseValue":35.4,"stdDev":1.528},{"name":"Omarion Hampton","team":"LAC","pos":"RB","posRank":"RB10","baseValue":34.2,"stdDev":4.359},{"name":"Chris Olave","team":"NO","pos":"WR","posRank":"WR12","baseValue":34.2,"stdDev":0.577},{"name":"Kenneth Walker III","team":"KC","pos":"RB","posRank":"RB11","baseValue":32.8,"stdDev":2.082},{"name":"Breece Hall","team":"NYJ","pos":"RB","posRank":"RB16","baseValue":32.6,"stdDev":4.509},{"name":"Tetairoa McMillan","team":"CAR","pos":"WR","posRank":"WR14","baseValue":32.24,"stdDev":14.978},{"name":"Trey McBride","team":"ARI","pos":"TE","posRank":"TE1","baseValue":31.8,"stdDev":5.033},{"name":"Brock Bowers","team":"LV","pos":"TE","posRank":"TE2","baseValue":29.2,"stdDev":2.082},{"name":"Bucky Irving","team":"TB","pos":"RB","posRank":"RB19","baseValue":29.0,"stdDev":2.646},{"name":"Garrett Wilson","team":"NYJ","pos":"WR","posRank":"WR17","baseValue":26.6,"stdDev":2.0},{"name":"Josh Allen","team":"BUF","pos":"QB","posRank":"QB1","baseValue":26.2,"stdDev":2.082},{"name":"Kyren Williams","team":"LAR","pos":"RB","posRank":"RB15","baseValue":26.19,"stdDev":6.11},{"name":"Travis Etienne Jr.","team":"NO","pos":"RB","posRank":"RB18","baseValue":25.59,"stdDev":1.0},{"name":"Jeremiyah Love","team":"ARI","pos":"RB","posRank":"RB13","baseValue":25.19,"stdDev":4.583},{"name":"Javonte Williams","team":"DAL","pos":"RB","posRank":"RB17","baseValue":25.19,"stdDev":3.0},{"name":"Tee Higgins","team":"CIN","pos":"WR","posRank":"WR15","baseValue":24.64,"stdDev":2.309},{"name":"Quinshon Judkins","team":"CLE","pos":"RB","posRank":"RB23","baseValue":21.19,"stdDev":4.163},{"name":"TreVeyon Henderson","team":"NE","pos":"RB","posRank":"RB21","baseValue":20.79,"stdDev":1.0},{"name":"Terry McLaurin","team":"WAS","pos":"WR","posRank":"WR22","baseValue":20.64,"stdDev":2.082},{"name":"D'Andre Swift","team":"CHI","pos":"RB","posRank":"RB22","baseValue":20.59,"stdDev":5.132},{"name":"Davante Adams","team":"LAR","pos":"WR","posRank":"WR18","baseValue":20.44,"stdDev":7.0},{"name":"Zay Flowers","team":"BAL","pos":"WR","posRank":"WR19","baseValue":20.24,"stdDev":6.429},{"name":"Ladd McConkey","team":"LAC","pos":"WR","posRank":"WR20","baseValue":20.24,"stdDev":4.163},{"name":"DeVonta Smith","team":"PHI","pos":"WR","posRank":"WR16","baseValue":18.84,"stdDev":4.163},{"name":"Lamar Jackson","team":"BAL","pos":"QB","posRank":"QB2","baseValue":18.8,"stdDev":4.359},{"name":"Jaylen Waddle","team":"DEN","pos":"WR","posRank":"WR23","baseValue":18.64,"stdDev":3.055},{"name":"Colston Loveland","team":"CHI","pos":"TE","posRank":"TE3","baseValue":18.6,"stdDev":2.082},{"name":"Jameson Williams","team":"DET","pos":"WR","posRank":"WR25","baseValue":18.44,"stdDev":4.726},{"name":"Drake Maye","team":"NE","pos":"QB","posRank":"QB3","baseValue":18.4,"stdDev":5.508},{"name":"Cam Skattebo","team":"NYG","pos":"RB","posRank":"RB20","baseValue":18.4,"stdDev":5.033},{"name":"Mike Evans","team":"SF","pos":"WR","posRank":"WR26","baseValue":17.44,"stdDev":2.0},{"name":"Luther Burden III","team":"CHI","pos":"WR","posRank":"WR21","baseValue":17.4,"stdDev":3.215},{"name":"Emeka Egbuka","team":"TB","pos":"WR","posRank":"WR24","baseValue":17.0,"stdDev":4.509},{"name":"Jalen Hurts","team":"PHI","pos":"QB","posRank":"QB6","baseValue":15.6,"stdDev":4.041},{"name":"George Kittle","team":"SF","pos":"TE","posRank":"TE13","baseValue":15.4,"stdDev":2.0},{"name":"Jayden Daniels","team":"WAS","pos":"QB","posRank":"QB5","baseValue":15.2,"stdDev":2.646},{"name":"DK Metcalf","team":"PIT","pos":"WR","posRank":"WR31","baseValue":15.04,"stdDev":1.528},{"name":"Joe Burrow","team":"CIN","pos":"QB","posRank":"QB4","baseValue":15.0,"stdDev":5.508},{"name":"DJ Moore","team":"BUF","pos":"WR","posRank":"WR28","baseValue":15.0,"stdDev":3.055},{"name":"Rome Odunze","team":"CHI","pos":"WR","posRank":"WR29","baseValue":14.2,"stdDev":8.185},{"name":"Christian Watson","team":"GB","pos":"WR","posRank":"WR27","baseValue":14.0,"stdDev":1.528},{"name":"Tucker Kraft","team":"GB","pos":"TE","posRank":"TE5","baseValue":13.8,"stdDev":2.517},{"name":"Sam LaPorta","team":"DET","pos":"TE","posRank":"TE7","baseValue":13.6,"stdDev":2.517},{"name":"Courtland Sutton","team":"DEN","pos":"WR","posRank":"WR34","baseValue":13.44,"stdDev":7.0},{"name":"Alec Pierce","team":"IND","pos":"WR","posRank":"WR33","baseValue":13.4,"stdDev":5.508},{"name":"Tyler Warren","team":"IND","pos":"TE","posRank":"TE4","baseValue":13.2,"stdDev":2.517},{"name":"Bhayshul Tuten","team":"JAC","pos":"RB","posRank":"RB25","baseValue":12.65,"stdDev":2.646},{"name":"RJ Harvey","team":"DEN","pos":"RB","posRank":"RB29","baseValue":12.6,"stdDev":3.0},{"name":"Marvin Harrison Jr.","team":"ARI","pos":"WR","posRank":"WR32","baseValue":12.4,"stdDev":2.0},{"name":"Jadarian Price","team":"SEA","pos":"RB","posRank":"RB26","baseValue":12.2,"stdDev":2.082},{"name":"Michael Wilson","team":"ARI","pos":"WR","posRank":"WR36","baseValue":12.0,"stdDev":4.041},{"name":"Jaylen Warren","team":"PIT","pos":"RB","posRank":"RB27","baseValue":11.8,"stdDev":2.082},{"name":"Brian Thomas Jr.","team":"JAC","pos":"WR","posRank":"WR38","baseValue":11.44,"stdDev":1.528},{"name":"Chris Godwin Jr.","team":"TB","pos":"WR","posRank":"WR37","baseValue":11.4,"stdDev":3.055},{"name":"Parker Washington","team":"JAC","pos":"WR","posRank":"WR41","baseValue":11.2,"stdDev":2.082},{"name":"David Montgomery","team":"HOU","pos":"RB","posRank":"RB24","baseValue":11.0,"stdDev":4.583},{"name":"Jakobi Meyers","team":"JAC","pos":"WR","posRank":"WR40","baseValue":10.8,"stdDev":2.309},{"name":"Chuba Hubbard","team":"CAR","pos":"RB","posRank":"RB28","baseValue":10.65,"stdDev":2.0},{"name":"Patrick Mahomes II","team":"KC","pos":"QB","posRank":"QB13","baseValue":10.6,"stdDev":2.887},{"name":"Kyle Monangai","team":"CHI","pos":"RB","posRank":"RB33","baseValue":10.6,"stdDev":2.082},{"name":"Blake Corum","team":"LAR","pos":"RB","posRank":"RB34","baseValue":10.6,"stdDev":3.512},{"name":"Carnell Tate","team":"TEN","pos":"WR","posRank":"WR30","baseValue":10.6,"stdDev":2.517},{"name":"Ricky Pearsall","team":"SF","pos":"WR","posRank":"WR42","baseValue":10.6,"stdDev":3.0},{"name":"Harold Fannin Jr.","team":"CLE","pos":"TE","posRank":"TE6","baseValue":10.54,"stdDev":1.732},{"name":"Rico Dowdle","team":"PIT","pos":"RB","posRank":"RB30","baseValue":10.4,"stdDev":5.568},{"name":"Michael Pittman Jr.","team":"PIT","pos":"WR","posRank":"WR44","baseValue":10.2,"stdDev":3.606},{"name":"Alvin Kamara","team":"NO","pos":"RB","posRank":"RB50","baseValue":10.0,"stdDev":4.0},{"name":"Justin Herbert","team":"LAC","pos":"QB","posRank":"QB7","baseValue":9.8,"stdDev":4.933},{"name":"Rhamondre Stevenson","team":"NE","pos":"RB","posRank":"RB31","baseValue":9.65,"stdDev":2.082},{"name":"Tony Pollard","team":"TEN","pos":"RB","posRank":"RB32","baseValue":9.65,"stdDev":2.082},{"name":"Jordyn Tyson","team":"NO","pos":"WR","posRank":"WR35","baseValue":9.6,"stdDev":2.646},{"name":"J.K. Dobbins","team":"DEN","pos":"RB","posRank":"RB35","baseValue":9.4,"stdDev":5.774},{"name":"Zach Charbonnet","team":"SEA","pos":"RB","posRank":"RB42","baseValue":9.0,"stdDev":2.082},{"name":"Makai Lemon","team":"PHI","pos":"WR","posRank":"WR39","baseValue":9.0,"stdDev":3.464},{"name":"Jaxson Dart","team":"NYG","pos":"QB","posRank":"QB8","baseValue":8.88,"stdDev":1.0},{"name":"Dak Prescott","team":"DAL","pos":"QB","posRank":"QB11","baseValue":8.88,"stdDev":2.082},{"name":"Kyle Pitts Sr.","team":"ATL","pos":"TE","posRank":"TE8","baseValue":8.74,"stdDev":1.0},{"name":"Dallas Goedert","team":"PHI","pos":"TE","posRank":"TE15","baseValue":8.54,"stdDev":3.786},{"name":"Caleb Williams","team":"CHI","pos":"QB","posRank":"QB9","baseValue":8.28,"stdDev":4.041},{"name":"Brock Purdy","team":"SF","pos":"QB","posRank":"QB12","baseValue":8.28,"stdDev":2.517},{"name":"Khalil Shakir","team":"BUF","pos":"WR","posRank":"WR50","baseValue":8.2,"stdDev":3.055},{"name":"Jordan Addison","team":"MIN","pos":"WR","posRank":"WR43","baseValue":8.0,"stdDev":2.517},{"name":"Jauan Jennings","team":"MIN","pos":"WR","posRank":"WR61","baseValue":7.8,"stdDev":5.508},{"name":"Jalen Coker","team":"CAR","pos":"WR","posRank":"WR54","baseValue":7.33,"stdDev":7.0},{"name":"Trevor Lawrence","team":"JAC","pos":"QB","posRank":"QB10","baseValue":7.28,"stdDev":2.517},{"name":"Jacory Croskey-Merritt","team":"WAS","pos":"RB","posRank":"RB36","baseValue":7.05,"stdDev":1.732},{"name":"Mark Andrews","team":"BAL","pos":"TE","posRank":"TE17","baseValue":7.0,"stdDev":6.429},{"name":"Jayden Reed","team":"GB","pos":"WR","posRank":"WR46","baseValue":6.92,"stdDev":1.155},{"name":"Dalton Kincaid","team":"BUF","pos":"TE","posRank":"TE9","baseValue":6.74,"stdDev":2.309},{"name":"Bo Nix","team":"DEN","pos":"QB","posRank":"QB15","baseValue":6.68,"stdDev":2.309},{"name":"Brandon Aiyuk","team":"SF","pos":"WR","posRank":"WR62","baseValue":6.4,"stdDev":0.0},{"name":"Stefon Diggs","team":"FA","pos":"WR","posRank":"WR63","baseValue":6.4,"stdDev":0.0},{"name":"Travis Kelce","team":"KC","pos":"TE","posRank":"TE10","baseValue":6.34,"stdDev":1.732},{"name":"Wan'Dale Robinson","team":"TEN","pos":"WR","posRank":"WR45","baseValue":6.33,"stdDev":4.041},{"name":"Matthew Stafford","team":"LAR","pos":"QB","posRank":"QB14","baseValue":6.28,"stdDev":3.055},{"name":"Woody Marks","team":"HOU","pos":"RB","posRank":"RB44","baseValue":6.25,"stdDev":2.517},{"name":"Xavier Worthy","team":"KC","pos":"WR","posRank":"WR52","baseValue":5.92,"stdDev":1.155},{"name":"Quentin Johnston","team":"LAC","pos":"WR","posRank":"WR47","baseValue":5.72,"stdDev":2.082},{"name":"Juwan Johnson","team":"NO","pos":"TE","posRank":"TE16","baseValue":5.54,"stdDev":2.517},{"name":"Brenton Strange","team":"JAC","pos":"TE","posRank":"TE18","baseValue":5.54,"stdDev":2.517},{"name":"Josh Downs","team":"IND","pos":"WR","posRank":"WR48","baseValue":5.53,"stdDev":4.0},{"name":"Travis Hunter","team":"JAC","pos":"WR","posRank":"WR59","baseValue":5.4,"stdDev":0.0},{"name":"Jared Goff","team":"DET","pos":"QB","posRank":"QB16","baseValue":5.28,"stdDev":2.0},{"name":"James Conner","team":"ARI","pos":"RB","posRank":"RB53","baseValue":5.25,"stdDev":2.646},{"name":"Hunter Henry","team":"NE","pos":"TE","posRank":"TE19","baseValue":5.14,"stdDev":1.528},{"name":"Aaron Jones Sr.","team":"MIN","pos":"RB","posRank":"RB37","baseValue":5.05,"stdDev":4.619},{"name":"Jordan Mason","team":"MIN","pos":"RB","posRank":"RB40","baseValue":5.05,"stdDev":2.517},{"name":"Jonah Coleman","team":"DEN","pos":"RB","posRank":"RB51","baseValue":5.0,"stdDev":3.215},{"name":"Baker Mayfield","team":"TB","pos":"QB","posRank":"QB20","baseValue":4.68,"stdDev":1.732},{"name":"Isiah Pacheco","team":"DET","pos":"RB","posRank":"RB48","baseValue":4.65,"stdDev":2.309},{"name":"Jordan Love","team":"GB","pos":"QB","posRank":"QB18","baseValue":4.48,"stdDev":2.517},{"name":"Tyjae Spears","team":"TEN","pos":"RB","posRank":"RB46","baseValue":4.45,"stdDev":1.528},{"name":"Kenneth Gainwell","team":"TB","pos":"RB","posRank":"RB38","baseValue":4.4,"stdDev":2.082},{"name":"Dylan Sampson","team":"CLE","pos":"RB","posRank":"RB49","baseValue":4.4,"stdDev":4.163},{"name":"Oronde Gadsden II","team":"LAC","pos":"TE","posRank":"TE12","baseValue":4.34,"stdDev":2.082},{"name":"Romeo Doubs","team":"NE","pos":"WR","posRank":"WR51","baseValue":4.33,"stdDev":3.0},{"name":"Denver Broncos","team":"DEN","pos":"DST","posRank":"DST2","baseValue":4.2,"stdDev":3.786},{"name":"Seattle Seahawks","team":"SEA","pos":"DST","posRank":"DST3","baseValue":4.0,"stdDev":3.055},{"name":"Malik Willis","team":"MIA","pos":"QB","posRank":"QB21","baseValue":4.0,"stdDev":4.0},{"name":"Kyler Murray","team":"MIN","pos":"QB","posRank":"QB17","baseValue":3.88,"stdDev":1.528},{"name":"Tyrone Tracy Jr.","team":"NYG","pos":"RB","posRank":"RB43","baseValue":3.85,"stdDev":1.155},{"name":"Tyler Shough","team":"NO","pos":"QB","posRank":"QB19","baseValue":3.8,"stdDev":3.512},{"name":"Rachaad White","team":"WAS","pos":"RB","posRank":"RB39","baseValue":3.6,"stdDev":2.887},{"name":"Jake Ferguson","team":"DAL","pos":"TE","posRank":"TE11","baseValue":3.54,"stdDev":1.732},{"name":"KC Concepcion","team":"CLE","pos":"WR","posRank":"WR53","baseValue":3.52,"stdDev":0.0},{"name":"Deebo Samuel Sr.","team":"FA","pos":"WR","posRank":"WR66","baseValue":3.52,"stdDev":0.0},{"name":"Isaiah Likely","team":"NYG","pos":"TE","posRank":"TE14","baseValue":3.4,"stdDev":2.0},{"name":"Matthew Golden","team":"GB","pos":"WR","posRank":"WR55","baseValue":3.4,"stdDev":3.464},{"name":"Jonathon Brooks","team":"CAR","pos":"RB","posRank":"RB47","baseValue":3.25,"stdDev":2.309},{"name":"Brian Robinson Jr.","team":"ATL","pos":"RB","posRank":"RB55","baseValue":3.25,"stdDev":1.155},{"name":"Braelon Allen","team":"NYJ","pos":"RB","posRank":"RB54","baseValue":3.05,"stdDev":1.0},{"name":"Bryce Young","team":"CAR","pos":"QB","posRank":"QB24","baseValue":3.0,"stdDev":3.055},{"name":"Tyler Allgeier","team":"ARI","pos":"RB","posRank":"RB41","baseValue":3.0,"stdDev":1.0},{"name":"Rashid Shaheed","team":"SEA","pos":"WR","posRank":"WR56","baseValue":2.92,"stdDev":0.577},{"name":"Emmett Johnson","team":"KC","pos":"RB","posRank":"RB58","baseValue":2.8,"stdDev":3.0},{"name":"Germie Bernard","team":"PIT","pos":"WR","posRank":"WR81","baseValue":2.6,"stdDev":2.517},{"name":"Jayden Higgins","team":"HOU","pos":"WR","posRank":"WR49","baseValue":2.52,"stdDev":0.0},{"name":"Denzel Boston","team":"CLE","pos":"WR","posRank":"WR57","baseValue":2.52,"stdDev":0.0},{"name":"Omar Cooper Jr.","team":"NYJ","pos":"WR","posRank":"WR58","baseValue":2.52,"stdDev":0.0},{"name":"Adonai Mitchell","team":"NYJ","pos":"WR","posRank":"WR67","baseValue":2.52,"stdDev":0.0},{"name":"Tyreek Hill","team":"FA","pos":"WR","posRank":"WR72","baseValue":2.52,"stdDev":0.0},{"name":"Tank Dell","team":"HOU","pos":"WR","posRank":"WR84","baseValue":2.52,"stdDev":0.0},{"name":"Tory Horton","team":"SEA","pos":"WR","posRank":"WR97","baseValue":2.52,"stdDev":0.0},{"name":"Keaton Mitchell","team":"LAC","pos":"RB","posRank":"RB52","baseValue":2.45,"stdDev":0.0},{"name":"Trey Benson","team":"ARI","pos":"RB","posRank":"RB69","baseValue":2.45,"stdDev":0.0},{"name":"Joe Mixon","team":"FA","pos":"RB","posRank":"RB83","baseValue":2.45,"stdDev":0.0},{"name":"Houston Texans","team":"HOU","pos":"DST","posRank":"DST1","baseValue":2.4,"stdDev":0.577},{"name":"Philadelphia Eagles","team":"PHI","pos":"DST","posRank":"DST5","baseValue":2.4,"stdDev":1.528},{"name":"Jaylen Wright","team":"MIA","pos":"RB","posRank":"RB65","baseValue":2.4,"stdDev":2.082},{"name":"Calvin Ridley","team":"TEN","pos":"WR","posRank":"WR75","baseValue":2.33,"stdDev":1.732},{"name":"New England Patriots","team":"NE","pos":"DST","posRank":"DST8","baseValue":2.2,"stdDev":2.309},{"name":"C.J. Stroud","team":"HOU","pos":"QB","posRank":"QB22","baseValue":2.2,"stdDev":1.732},{"name":"Chris Rodriguez Jr.","team":"JAC","pos":"RB","posRank":"RB45","baseValue":2.2,"stdDev":1.155},{"name":"Adam Randall","team":"BAL","pos":"RB","posRank":"RB68","baseValue":2.2,"stdDev":2.082},{"name":"Evan McPherson","team":"CIN","pos":"K","posRank":"K7","baseValue":2.16,"stdDev":2.082},{"name":"Dalton Schultz","team":"HOU","pos":"TE","posRank":"TE20","baseValue":2.11,"stdDev":2.646},{"name":"Brandon Aubrey","team":"DAL","pos":"K","posRank":"K1","baseValue":2.0,"stdDev":0.0},{"name":"Ka'imi Fairbairn","team":"HOU","pos":"K","posRank":"K2","baseValue":2.0,"stdDev":0.0},{"name":"Cameron Dicker","team":"LAC","pos":"K","posRank":"K3","baseValue":2.0,"stdDev":0.0},{"name":"Eddy Pineiro","team":"SF","pos":"K","posRank":"K6","baseValue":2.0,"stdDev":0.0},{"name":"Emanuel Wilson","team":"SEA","pos":"RB","posRank":"RB57","baseValue":2.0,"stdDev":2.646},{"name":"Jerry Jeudy","team":"CLE","pos":"WR","posRank":"WR60","baseValue":2.0,"stdDev":2.646},{"name":"Kenyon Sadiq","team":"NYJ","pos":"TE","posRank":"TE22","baseValue":1.91,"stdDev":0.0},{"name":"Theo Johnson","team":"NYG","pos":"TE","posRank":"TE33","baseValue":1.91,"stdDev":0.0},{"name":"Cam Ward","team":"TEN","pos":"QB","posRank":"QB25","baseValue":1.8,"stdDev":0.577},{"name":"Justice Hill","team":"BAL","pos":"RB","posRank":"RB79","baseValue":1.8,"stdDev":2.887},{"name":"Jaylin Noel","team":"HOU","pos":"WR","posRank":"WR73","baseValue":1.8,"stdDev":1.155},{"name":"Rashod Bateman","team":"BAL","pos":"WR","posRank":"WR94","baseValue":1.8,"stdDev":2.887},{"name":"Jalen Tolbert","team":"MIA","pos":"WR","posRank":"WR121","baseValue":1.8,"stdDev":2.887},{"name":"Christian Kirk","team":"SF","pos":"WR","posRank":"WR99","baseValue":1.73,"stdDev":0.0},{"name":"Keenan Allen","team":"LAC","pos":"WR","posRank":"WR104","baseValue":1.73,"stdDev":0.0},{"name":"Cedric Tillman","team":"CLE","pos":"WR","posRank":"WR112","baseValue":1.73,"stdDev":0.0},{"name":"Najee Harris","team":"LAC","pos":"RB","posRank":"RB73","baseValue":1.65,"stdDev":0.0},{"name":"Sam Darnold","team":"SEA","pos":"QB","posRank":"QB23","baseValue":1.6,"stdDev":0.577},{"name":"Chase McLaughlin","team":"TB","pos":"K","posRank":"K11","baseValue":1.56,"stdDev":0.577},{"name":"Los Angeles Rams","team":"LAR","pos":"DST","posRank":"DST4","baseValue":1.4,"stdDev":0.0},{"name":"Jacksonville Jaguars","team":"JAC","pos":"DST","posRank":"DST6","baseValue":1.4,"stdDev":0.0},{"name":"Pittsburgh Steelers","team":"PIT","pos":"DST","posRank":"DST7","baseValue":1.4,"stdDev":0.0},{"name":"Minnesota Vikings","team":"MIN","pos":"DST","posRank":"DST9","baseValue":1.4,"stdDev":0.0},{"name":"Cleveland Browns","team":"CLE","pos":"DST","posRank":"DST10","baseValue":1.4,"stdDev":0.0},{"name":"Los Angeles Chargers","team":"LAC","pos":"DST","posRank":"DST11","baseValue":1.4,"stdDev":0.0},{"name":"Green Bay Packers","team":"GB","pos":"DST","posRank":"DST12","baseValue":1.4,"stdDev":0.0},{"name":"Kansas City Chiefs","team":"KC","pos":"DST","posRank":"DST13","baseValue":1.4,"stdDev":0.0},{"name":"Baltimore Ravens","team":"BAL","pos":"DST","posRank":"DST14","baseValue":1.4,"stdDev":0.0},{"name":"Daniel Jones","team":"IND","pos":"QB","posRank":"QB26","baseValue":1.4,"stdDev":0.577},{"name":"Cam Little","team":"JAC","pos":"K","posRank":"K4","baseValue":1.36,"stdDev":0.577},{"name":"Chris Boswell","team":"PIT","pos":"K","posRank":"K14","baseValue":1.36,"stdDev":0.0},{"name":"Buffalo Bills","team":"BUF","pos":"DST","posRank":"DST15","baseValue":1.2,"stdDev":0.0},{"name":"Detroit Lions","team":"DET","pos":"DST","posRank":"DST16","baseValue":1.2,"stdDev":0.0},{"name":"Atlanta Falcons","team":"ATL","pos":"DST","posRank":"DST17","baseValue":1.2,"stdDev":0.0},{"name":"Indianapolis Colts","team":"IND","pos":"DST","posRank":"DST18","baseValue":1.2,"stdDev":0.0},{"name":"San Francisco 49ers","team":"SF","pos":"DST","posRank":"DST19","baseValue":1.2,"stdDev":0.0},{"name":"New Orleans Saints","team":"NO","pos":"DST","posRank":"DST20","baseValue":1.2,"stdDev":0.0},{"name":"Chicago Bears","team":"CHI","pos":"DST","posRank":"DST21","baseValue":1.2,"stdDev":0.0},{"name":"Carolina Panthers","team":"CAR","pos":"DST","posRank":"DST22","baseValue":1.2,"stdDev":0.0},{"name":"Dallas Cowboys","team":"DAL","pos":"DST","posRank":"DST23","baseValue":1.2,"stdDev":0.0},{"name":"Miami Dolphins","team":"MIA","pos":"DST","posRank":"DST24","baseValue":1.2,"stdDev":0.0},{"name":"Samaje Perine","team":"CIN","pos":"RB","posRank":"RB92","baseValue":1.2,"stdDev":1.155},{"name":"Jason Myers","team":"SEA","pos":"K","posRank":"K5","baseValue":1.16,"stdDev":0.0},{"name":"Tyler Loop","team":"BAL","pos":"K","posRank":"K8","baseValue":1.16,"stdDev":0.0},{"name":"Andy Borregales","team":"NE","pos":"K","posRank":"K9","baseValue":1.16,"stdDev":0.0},{"name":"Cairo Santos","team":"CHI","pos":"K","posRank":"K10","baseValue":1.16,"stdDev":0.0},{"name":"Harrison Butker","team":"KC","pos":"K","posRank":"K13","baseValue":1.16,"stdDev":0.0},{"name":"T.J. Hockenson","team":"MIN","pos":"TE","posRank":"TE23","baseValue":1.11,"stdDev":0.0},{"name":"AJ Barner","team":"SEA","pos":"TE","posRank":"TE24","baseValue":1.11,"stdDev":0.0},{"name":"Terrance Ferguson","team":"LAR","pos":"TE","posRank":"TE25","baseValue":1.11,"stdDev":0.0},{"name":"Eli Stowers","team":"PHI","pos":"TE","posRank":"TE28","baseValue":1.11,"stdDev":0.0},{"name":"New York Giants","team":"NYG","pos":"DST","posRank":"DST25","baseValue":1.0,"stdDev":0.0},{"name":"Washington Commanders","team":"WAS","pos":"DST","posRank":"DST26","baseValue":1.0,"stdDev":0.0},{"name":"Cincinnati Bengals","team":"CIN","pos":"DST","posRank":"DST27","baseValue":1.0,"stdDev":0.0},{"name":"Blake Grupe","team":"IND","pos":"K","posRank":"K20","baseValue":1.0,"stdDev":0.0},{"name":"Jake Elliott","team":"PHI","pos":"K","posRank":"K21","baseValue":1.0,"stdDev":0.0},{"name":"Chad Ryland","team":"ARI","pos":"K","posRank":"K22","baseValue":1.0,"stdDev":0.0},{"name":"Tyler Bass","team":"BUF","pos":"K","posRank":"K23","baseValue":1.0,"stdDev":0.0},{"name":"Joey Slye","team":"TEN","pos":"K","posRank":"K24","baseValue":1.0,"stdDev":0.0},{"name":"Brandon McManus","team":"FA","pos":"K","posRank":"K25","baseValue":1.0,"stdDev":0.0},{"name":"Fernando Mendoza","team":"LV","pos":"QB","posRank":"QB28","baseValue":1.0,"stdDev":0.0},{"name":"Michael Penix Jr.","team":"ATL","pos":"QB","posRank":"QB30","baseValue":1.0,"stdDev":0.0},{"name":"Shedeur Sanders","team":"CLE","pos":"QB","posRank":"QB32","baseValue":1.0,"stdDev":0.0},{"name":"J.J. McCarthy","team":"MIN","pos":"QB","posRank":"QB37","baseValue":1.0,"stdDev":0.0},{"name":"Justin Fields","team":"KC","pos":"QB","posRank":"QB39","baseValue":1.0,"stdDev":0.0},{"name":"Anthony Richardson Sr.","team":"IND","pos":"QB","posRank":"QB40","baseValue":1.0,"stdDev":0.0},{"name":"Carson Beck","team":"ARI","pos":"QB","posRank":"QB41","baseValue":1.0,"stdDev":0.0},{"name":"Joe Milton III","team":"DAL","pos":"QB","posRank":"QB42","baseValue":1.0,"stdDev":0.0},{"name":"Jameis Winston","team":"NYG","pos":"QB","posRank":"QB43","baseValue":1.0,"stdDev":0.0},{"name":"Joe Flacco","team":"CIN","pos":"QB","posRank":"QB44","baseValue":1.0,"stdDev":0.0},{"name":"Marcus Mariota","team":"WAS","pos":"QB","posRank":"QB45","baseValue":1.0,"stdDev":0.0},{"name":"Gardner Minshew II","team":"ARI","pos":"QB","posRank":"QB46","baseValue":1.0,"stdDev":0.0},{"name":"Tank Bigsby","team":"PHI","pos":"RB","posRank":"RB56","baseValue":1.0,"stdDev":0.0},{"name":"Mike Washington Jr.","team":"LV","pos":"RB","posRank":"RB59","baseValue":1.0,"stdDev":0.0},{"name":"Nicholas Singleton","team":"TEN","pos":"RB","posRank":"RB60","baseValue":1.0,"stdDev":0.0},{"name":"Kaytron Allen","team":"WAS","pos":"RB","posRank":"RB61","baseValue":1.0,"stdDev":0.0},{"name":"Kimani Vidal","team":"LAC","pos":"RB","posRank":"RB62","baseValue":1.0,"stdDev":0.0},{"name":"Sean Tucker","team":"TB","pos":"RB","posRank":"RB64","baseValue":1.0,"stdDev":0.0},{"name":"Demond Claiborne","team":"MIN","pos":"RB","posRank":"RB66","baseValue":1.0,"stdDev":0.0},{"name":"Devin Neal","team":"NO","pos":"RB","posRank":"RB70","baseValue":1.0,"stdDev":0.0},{"name":"Kaleb Johnson","team":"PIT","pos":"RB","posRank":"RB71","baseValue":1.0,"stdDev":0.0},{"name":"Kendre Miller","team":"NO","pos":"RB","posRank":"RB72","baseValue":1.0,"stdDev":0.0},{"name":"Ty Johnson","team":"BUF","pos":"RB","posRank":"RB76","baseValue":1.0,"stdDev":0.577},{"name":"Jordan James","team":"SF","pos":"RB","posRank":"RB78","baseValue":1.0,"stdDev":0.577},{"name":"Jaleel McLaughlin","team":"DEN","pos":"RB","posRank":"RB93","baseValue":1.0,"stdDev":0.577},{"name":"Raheim Sanders","team":"CLE","pos":"RB","posRank":"RB106","baseValue":1.0,"stdDev":0.0},{"name":"Jawhar Jordan","team":"HOU","pos":"RB","posRank":"RB107","baseValue":1.0,"stdDev":0.0},{"name":"Antonio Gibson","team":"FA","pos":"RB","posRank":"RB108","baseValue":1.0,"stdDev":0.0},{"name":"J'Mari Taylor","team":"JAC","pos":"RB","posRank":"RB109","baseValue":1.0,"stdDev":0.0},{"name":"Dameon Pierce","team":"PHI","pos":"RB","posRank":"RB110","baseValue":1.0,"stdDev":0.0},{"name":"Terrell Jennings","team":"NE","pos":"RB","posRank":"RB111","baseValue":1.0,"stdDev":0.0},{"name":"Phil Mafah","team":"DAL","pos":"RB","posRank":"RB112","baseValue":1.0,"stdDev":0.0},{"name":"Damien Martinez","team":"GB","pos":"RB","posRank":"RB113","baseValue":1.0,"stdDev":0.0},{"name":"Chig Okonkwo","team":"WAS","pos":"TE","posRank":"TE21","baseValue":1.0,"stdDev":0.0},{"name":"David Njoku","team":"LAC","pos":"TE","posRank":"TE27","baseValue":1.0,"stdDev":0.0},{"name":"Mason Taylor","team":"NYJ","pos":"TE","posRank":"TE32","baseValue":1.0,"stdDev":0.0},{"name":"Michael Mayer","team":"LV","pos":"TE","posRank":"TE43","baseValue":1.0,"stdDev":0.0},{"name":"Justin Joly","team":"DEN","pos":"TE","posRank":"TE44","baseValue":1.0,"stdDev":0.0},{"name":"Ja'Tavion Sanders","team":"CAR","pos":"TE","posRank":"TE45","baseValue":1.0,"stdDev":0.0},{"name":"Tommy Myers","team":"FA","pos":"TE","posRank":"TE46","baseValue":1.0,"stdDev":0.0},{"name":"John Bates","team":"WAS","pos":"TE","posRank":"TE47","baseValue":1.0,"stdDev":0.0},{"name":"Cole Kmet","team":"CHI","pos":"TE","posRank":"TE48","baseValue":1.0,"stdDev":0.0},{"name":"Elijah Arroyo","team":"SEA","pos":"TE","posRank":"TE49","baseValue":1.0,"stdDev":0.0},{"name":"Ben Sinnott","team":"WAS","pos":"TE","posRank":"TE50","baseValue":1.0,"stdDev":0.0},{"name":"Darren Waller","team":"FA","pos":"TE","posRank":"TE51","baseValue":1.0,"stdDev":0.0},{"name":"Noah Fant","team":"NO","pos":"TE","posRank":"TE52","baseValue":1.0,"stdDev":0.0},{"name":"Zach Ertz","team":"FA","pos":"TE","posRank":"TE53","baseValue":1.0,"stdDev":0.0},{"name":"Dawson Knox","team":"BUF","pos":"TE","posRank":"TE54","baseValue":1.0,"stdDev":0.0},{"name":"Mitchell Evans","team":"CAR","pos":"TE","posRank":"TE55","baseValue":1.0,"stdDev":0.0},{"name":"Luke Musgrave","team":"GB","pos":"TE","posRank":"TE56","baseValue":1.0,"stdDev":0.0},{"name":"Daniel Bellinger","team":"TEN","pos":"TE","posRank":"TE57","baseValue":1.0,"stdDev":0.0},{"name":"Jonnu Smith","team":"FA","pos":"TE","posRank":"TE58","baseValue":1.0,"stdDev":0.0},{"name":"Eli Raridon","team":"NE","pos":"TE","posRank":"TE59","baseValue":1.0,"stdDev":0.0},{"name":"Elijah Higgins","team":"ARI","pos":"TE","posRank":"TE60","baseValue":1.0,"stdDev":0.0},{"name":"Tommy Tremble","team":"CAR","pos":"TE","posRank":"TE61","baseValue":1.0,"stdDev":0.0},{"name":"Jackson Hawes","team":"BUF","pos":"TE","posRank":"TE62","baseValue":1.0,"stdDev":0.0},{"name":"Kayshon Boutte","team":"NE","pos":"WR","posRank":"WR65","baseValue":1.0,"stdDev":0.0},{"name":"Antonio Williams","team":"WAS","pos":"WR","posRank":"WR68","baseValue":1.0,"stdDev":0.0},{"name":"Troy Franklin","team":"DEN","pos":"WR","posRank":"WR69","baseValue":1.0,"stdDev":0.0},{"name":"Tre' Harris","team":"LAC","pos":"WR","posRank":"WR70","baseValue":1.0,"stdDev":0.0},{"name":"Isaac TeSlaa","team":"DET","pos":"WR","posRank":"WR74","baseValue":1.0,"stdDev":0.0},{"name":"Pat Bryant","team":"DEN","pos":"WR","posRank":"WR76","baseValue":1.0,"stdDev":0.0},{"name":"Darnell Mooney","team":"NYG","pos":"WR","posRank":"WR77","baseValue":1.0,"stdDev":0.0},{"name":"Ryan Flournoy","team":"DAL","pos":"WR","posRank":"WR78","baseValue":1.0,"stdDev":0.0},{"name":"Chimere Dike","team":"TEN","pos":"WR","posRank":"WR79","baseValue":1.0,"stdDev":0.0},{"name":"Chris Bell","team":"MIA","pos":"WR","posRank":"WR80","baseValue":1.0,"stdDev":0.0},{"name":"De'Zhaun Stribling","team":"SF","pos":"WR","posRank":"WR82","baseValue":1.0,"stdDev":0.0},{"name":"Zachariah Branch","team":"ATL","pos":"WR","posRank":"WR85","baseValue":1.0,"stdDev":0.0},{"name":"Elic Ayomanor","team":"TEN","pos":"WR","posRank":"WR90","baseValue":1.0,"stdDev":0.0},{"name":"Kyle Williams","team":"NE","pos":"WR","posRank":"WR95","baseValue":1.0,"stdDev":0.0},{"name":"Isaiah Bond","team":"CLE","pos":"WR","posRank":"WR110","baseValue":1.0,"stdDev":0.0},{"name":"Savion Williams","team":"GB","pos":"WR","posRank":"WR129","baseValue":1.0,"stdDev":0.0},{"name":"DeMario Douglas","team":"NE","pos":"WR","posRank":"WR130","baseValue":1.0,"stdDev":0.0},{"name":"Jaylin Lane","team":"WAS","pos":"WR","posRank":"WR131","baseValue":1.0,"stdDev":0.0},{"name":"KaVontae Turpin","team":"DAL","pos":"WR","posRank":"WR132","baseValue":1.0,"stdDev":0.0},{"name":"Kevin Coleman Jr.","team":"MIA","pos":"WR","posRank":"WR133","baseValue":1.0,"stdDev":0.0},{"name":"Cyrus Allen","team":"KC","pos":"WR","posRank":"WR134","baseValue":1.0,"stdDev":0.0},{"name":"Kalif Raymond","team":"CHI","pos":"WR","posRank":"WR135","baseValue":1.0,"stdDev":0.0},{"name":"Deion Burks","team":"IND","pos":"WR","posRank":"WR136","baseValue":1.0,"stdDev":0.0},{"name":"Dyami Brown","team":"WAS","pos":"WR","posRank":"WR137","baseValue":1.0,"stdDev":0.0},{"name":"Tutu Atwell","team":"MIA","pos":"WR","posRank":"WR138","baseValue":1.0,"stdDev":0.0},{"name":"Kendrick Bourne","team":"ARI","pos":"WR","posRank":"WR139","baseValue":1.0,"stdDev":0.0},{"name":"Nick Westbrook-Ikhine","team":"IND","pos":"WR","posRank":"WR140","baseValue":1.0,"stdDev":0.0},{"name":"CJ Daniels","team":"LAR","pos":"WR","posRank":"WR141","baseValue":1.0,"stdDev":0.0},{"name":"Jordan Whittington","team":"LAR","pos":"WR","posRank":"WR142","baseValue":1.0,"stdDev":0.0},{"name":"Zavion Thomas","team":"CHI","pos":"WR","posRank":"WR143","baseValue":1.0,"stdDev":0.0},{"name":"Tai Felton","team":"MIN","pos":"WR","posRank":"WR144","baseValue":1.0,"stdDev":0.0},{"name":"Demarcus Robinson","team":"SF","pos":"WR","posRank":"WR145","baseValue":1.0,"stdDev":0.0},{"name":"Devontez Walker","team":"BAL","pos":"WR","posRank":"WR146","baseValue":1.0,"stdDev":0.0},{"name":"Greg Dortch","team":"DET","pos":"WR","posRank":"WR147","baseValue":1.0,"stdDev":0.0},{"name":"Roman Wilson","team":"FA","pos":"WR","posRank":"WR148","baseValue":1.0,"stdDev":0.0},{"name":"Malik Benson","team":"LV","pos":"WR","posRank":"WR149","baseValue":1.0,"stdDev":0.0},{"name":"Jake Bates","team":"DET","pos":"K","posRank":"K12","baseValue":0.8,"stdDev":0.0},{"name":"Harrison Mevis","team":"LAR","pos":"K","posRank":"K15","baseValue":0.8,"stdDev":0.0},{"name":"Wil Lutz","team":"DEN","pos":"K","posRank":"K16","baseValue":0.8,"stdDev":0.0},{"name":"Will Reichard","team":"MIN","pos":"K","posRank":"K17","baseValue":0.8,"stdDev":0.0},{"name":"Charlie Smyth","team":"NO","pos":"K","posRank":"K18","baseValue":0.8,"stdDev":0.0},{"name":"Zane Gonzalez","team":"MIA","pos":"K","posRank":"K19","baseValue":0.8,"stdDev":0.0},{"name":"Jacoby Brissett","team":"ARI","pos":"QB","posRank":"QB27","baseValue":0.8,"stdDev":0.0},{"name":"Geno Smith","team":"NYJ","pos":"QB","posRank":"QB29","baseValue":0.8,"stdDev":0.0},{"name":"Aaron Rodgers","team":"PIT","pos":"QB","posRank":"QB31","baseValue":0.8,"stdDev":0.0},{"name":"Tua Tagovailoa","team":"ATL","pos":"QB","posRank":"QB33","baseValue":0.8,"stdDev":0.0},{"name":"Kirk Cousins","team":"LV","pos":"QB","posRank":"QB34","baseValue":0.8,"stdDev":0.0},{"name":"Deshaun Watson","team":"CLE","pos":"QB","posRank":"QB35","baseValue":0.8,"stdDev":0.0},{"name":"Ty Simpson","team":"LAR","pos":"QB","posRank":"QB36","baseValue":0.8,"stdDev":0.0},{"name":"Mac Jones","team":"SF","pos":"QB","posRank":"QB38","baseValue":0.8,"stdDev":0.0},{"name":"Ray Davis","team":"BUF","pos":"RB","posRank":"RB63","baseValue":0.8,"stdDev":0.0},{"name":"Ollie Gordon II","team":"MIA","pos":"RB","posRank":"RB67","baseValue":0.8,"stdDev":0.0},{"name":"Isaiah Davis","team":"NYJ","pos":"RB","posRank":"RB74","baseValue":0.8,"stdDev":0.0},{"name":"Brashard Smith","team":"KC","pos":"RB","posRank":"RB75","baseValue":0.8,"stdDev":0.0},{"name":"Jaydon Blue","team":"DAL","pos":"RB","posRank":"RB77","baseValue":0.8,"stdDev":0.0},{"name":"DJ Giddens","team":"IND","pos":"RB","posRank":"RB80","baseValue":0.8,"stdDev":0.0},{"name":"Jerome Ford","team":"WAS","pos":"RB","posRank":"RB81","baseValue":0.8,"stdDev":0.0},{"name":"Chris Brooks","team":"GB","pos":"RB","posRank":"RB82","baseValue":0.8,"stdDev":0.0},{"name":"Seth McGowan","team":"IND","pos":"RB","posRank":"RB84","baseValue":0.8,"stdDev":0.0},{"name":"Isaac Guerendo","team":"SF","pos":"RB","posRank":"RB85","baseValue":0.8,"stdDev":0.0},{"name":"Devin Singletary","team":"NYG","pos":"RB","posRank":"RB86","baseValue":0.8,"stdDev":0.0},{"name":"George Holani","team":"SEA","pos":"RB","posRank":"RB87","baseValue":0.8,"stdDev":0.0},{"name":"MarShawn Lloyd","team":"GB","pos":"RB","posRank":"RB88","baseValue":0.8,"stdDev":0.0},{"name":"Malik Davis","team":"DAL","pos":"RB","posRank":"RB89","baseValue":0.8,"stdDev":0.0},{"name":"LeQuint Allen Jr.","team":"JAC","pos":"RB","posRank":"RB90","baseValue":0.8,"stdDev":0.0},{"name":"Emari Demercado","team":"KC","pos":"RB","posRank":"RB91","baseValue":0.8,"stdDev":0.0},{"name":"Tahj Brooks","team":"CIN","pos":"RB","posRank":"RB94","baseValue":0.8,"stdDev":0.0},{"name":"Audric Estime","team":"NO","pos":"RB","posRank":"RB95","baseValue":0.8,"stdDev":0.0},{"name":"Trevor Etienne","team":"CAR","pos":"RB","posRank":"RB96","baseValue":0.8,"stdDev":0.0},{"name":"Jarquez Hunter","team":"LAR","pos":"RB","posRank":"RB97","baseValue":0.8,"stdDev":0.0},{"name":"Kaelon Black","team":"SF","pos":"RB","posRank":"RB98","baseValue":0.8,"stdDev":0.0},{"name":"Kareem Hunt","team":"FA","pos":"RB","posRank":"RB99","baseValue":0.8,"stdDev":0.0},{"name":"Will Shipley","team":"PHI","pos":"RB","posRank":"RB100","baseValue":0.8,"stdDev":0.0},{"name":"Bam Knight","team":"ARI","pos":"RB","posRank":"RB101","baseValue":0.8,"stdDev":0.0},{"name":"Nick Chubb","team":"FA","pos":"RB","posRank":"RB102","baseValue":0.8,"stdDev":0.0},{"name":"Michael Carter","team":"TEN","pos":"RB","posRank":"RB103","baseValue":0.8,"stdDev":0.0},{"name":"Austin Ekeler","team":"FA","pos":"RB","posRank":"RB104","baseValue":0.8,"stdDev":0.0},{"name":"Eli Heidenreich","team":"PIT","pos":"RB","posRank":"RB105","baseValue":0.8,"stdDev":0.0},{"name":"Gunnar Helm","team":"TEN","pos":"TE","posRank":"TE26","baseValue":0.8,"stdDev":0.0},{"name":"Cade Otton","team":"TB","pos":"TE","posRank":"TE29","baseValue":0.8,"stdDev":0.0},{"name":"Pat Freiermuth","team":"PIT","pos":"TE","posRank":"TE30","baseValue":0.8,"stdDev":0.0},{"name":"Colby Parkinson","team":"LAR","pos":"TE","posRank":"TE31","baseValue":0.8,"stdDev":0.0},{"name":"Evan Engram","team":"DEN","pos":"TE","posRank":"TE34","baseValue":0.8,"stdDev":0.0},{"name":"Jake Tonges","team":"SF","pos":"TE","posRank":"TE35","baseValue":0.8,"stdDev":0.0},{"name":"Max Klare","team":"LAR","pos":"TE","posRank":"TE36","baseValue":0.8,"stdDev":0.0},{"name":"Greg Dulcich","team":"MIA","pos":"TE","posRank":"TE37","baseValue":0.8,"stdDev":0.0},{"name":"Mike Gesicki","team":"CIN","pos":"TE","posRank":"TE38","baseValue":0.8,"stdDev":0.0},{"name":"Oscar Delp","team":"NO","pos":"TE","posRank":"TE39","baseValue":0.8,"stdDev":0.0},{"name":"Darnell Washington","team":"PIT","pos":"TE","posRank":"TE40","baseValue":0.8,"stdDev":0.0},{"name":"Tyler Higbee","team":"LAR","pos":"TE","posRank":"TE41","baseValue":0.8,"stdDev":0.0},{"name":"Noah Gray","team":"KC","pos":"TE","posRank":"TE42","baseValue":0.8,"stdDev":0.0},{"name":"Jalen McMillan","team":"TB","pos":"WR","posRank":"WR64","baseValue":0.8,"stdDev":0.0},{"name":"Tre Tucker","team":"LV","pos":"WR","posRank":"WR71","baseValue":0.8,"stdDev":0.0},{"name":"Dontayvion Wicks","team":"PHI","pos":"WR","posRank":"WR83","baseValue":0.8,"stdDev":0.0},{"name":"Ja'Kobi Lane","team":"BAL","pos":"WR","posRank":"WR86","baseValue":0.8,"stdDev":0.0},{"name":"Jalen Nailor","team":"LV","pos":"WR","posRank":"WR87","baseValue":0.8,"stdDev":0.0},{"name":"Elijah Sarratt","team":"BAL","pos":"WR","posRank":"WR88","baseValue":0.8,"stdDev":0.0},{"name":"Malik Washington","team":"MIA","pos":"WR","posRank":"WR89","baseValue":0.8,"stdDev":0.0},{"name":"Malachi Fields","team":"NYG","pos":"WR","posRank":"WR91","baseValue":0.8,"stdDev":0.0},{"name":"Chris Brazzell II","team":"CAR","pos":"WR","posRank":"WR92","baseValue":0.8,"stdDev":0.0},{"name":"Skyler Bell","team":"BUF","pos":"WR","posRank":"WR93","baseValue":0.8,"stdDev":0.0},{"name":"Ted Hurst","team":"TB","pos":"WR","posRank":"WR96","baseValue":0.8,"stdDev":0.0},{"name":"Jack Bech","team":"LV","pos":"WR","posRank":"WR98","baseValue":0.8,"stdDev":0.0},{"name":"Cooper Kupp","team":"SEA","pos":"WR","posRank":"WR100","baseValue":0.8,"stdDev":0.0},{"name":"Keon Coleman","team":"BUF","pos":"WR","posRank":"WR101","baseValue":0.8,"stdDev":0.0},{"name":"Marvin Mims Jr.","team":"DEN","pos":"WR","posRank":"WR102","baseValue":0.8,"stdDev":0.0},{"name":"Mack Hollins","team":"NE","pos":"WR","posRank":"WR103","baseValue":0.8,"stdDev":0.0},{"name":"Devaughn Vele","team":"NO","pos":"WR","posRank":"WR105","baseValue":0.8,"stdDev":0.0},{"name":"Xavier Legette","team":"CAR","pos":"WR","posRank":"WR106","baseValue":0.8,"stdDev":0.0},{"name":"Darius Slayton","team":"NYG","pos":"WR","posRank":"WR107","baseValue":0.8,"stdDev":0.0},{"name":"Tyquan Thornton","team":"KC","pos":"WR","posRank":"WR108","baseValue":0.8,"stdDev":0.0},{"name":"Hollywood Brown","team":"PHI","pos":"WR","posRank":"WR109","baseValue":0.8,"stdDev":0.0},{"name":"Andrei Iosivas","team":"CIN","pos":"WR","posRank":"WR111","baseValue":0.8,"stdDev":0.0},{"name":"Konata Mumpfield","team":"LAR","pos":"WR","posRank":"WR113","baseValue":0.8,"stdDev":0.0},{"name":"Calvin Austin III","team":"NYG","pos":"WR","posRank":"WR114","baseValue":0.8,"stdDev":0.0},{"name":"Luke McCaffrey","team":"WAS","pos":"WR","posRank":"WR115","baseValue":0.8,"stdDev":0.0},{"name":"Jahan Dotson","team":"ATL","pos":"WR","posRank":"WR116","baseValue":0.8,"stdDev":0.0},{"name":"Tez Johnson","team":"TB","pos":"WR","posRank":"WR117","baseValue":0.8,"stdDev":0.0},{"name":"Jalen Royals","team":"KC","pos":"WR","posRank":"WR118","baseValue":0.8,"stdDev":0.0},{"name":"Caleb Douglas","team":"MIA","pos":"WR","posRank":"WR119","baseValue":0.8,"stdDev":0.0},{"name":"Brenen Thompson","team":"LAC","pos":"WR","posRank":"WR120","baseValue":0.8,"stdDev":0.0},{"name":"Olamide Zaccheaus","team":"ATL","pos":"WR","posRank":"WR122","baseValue":0.8,"stdDev":0.0},{"name":"Bryce Lance","team":"NO","pos":"WR","posRank":"WR123","baseValue":0.8,"stdDev":0.0},{"name":"Treylon Burks","team":"WAS","pos":"WR","posRank":"WR124","baseValue":0.8,"stdDev":0.0},{"name":"Dont'e Thornton Jr.","team":"LV","pos":"WR","posRank":"WR125","baseValue":0.8,"stdDev":0.0},{"name":"Xavier Hutchinson","team":"HOU","pos":"WR","posRank":"WR126","baseValue":0.8,"stdDev":0.0},{"name":"John Metchie III","team":"CAR","pos":"WR","posRank":"WR127","baseValue":0.8,"stdDev":0.0},{"name":"Joshua Palmer","team":"BUF","pos":"WR","posRank":"WR128","baseValue":0.8,"stdDev":0.0}];
+
+/* ============================================================
+   FANTASY FOOTBALL AUCTION DRAFT — Engine
+   ============================================================ */
+
+/* ---------- League constants ---------- */
+const NUM_TEAMS = 12;
+const BUDGET = 200;
+const STARTERS = { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, DST: 1, K: 1 };
+const ROSTER_SIZE = 16;
+const POS_MAX = { QB: 2, RB: 8, WR: 8, TE: 2, DST: 1, K: 1 };
+const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST', 'K'];
+
+/* CPU team names */
+const CPU_TEAM_NAMES = [
+  'The Gridiron Gurus', 'Pigskin Pros', 'End Zone Elite', 'Touchdown Titans',
+  'Blitz Brigade', 'Hail Mary Heroes', 'Red Zone Raiders', 'Field Goal Phantoms',
+  'Audible Architects', 'Sack Stackers', 'Pocket Predators'
+];
+
+/* ---------- Global state ---------- */
+const state = {
+  players: [],                     // copy of PLAYERS_DB
+  teams: [],                       // 12 team objects
+  userTeamIndex: 0,
+  userTeamName: 'Your Team',
+  userEmail: '',
+  nominationOrder: [],             // shuffled team indices, fixed for draft
+  nominationCursor: 0,             // which index in nominationOrder is up
+  pickNumber: 1,                   // 1-based
+  draftHistory: [],                // {player, team, price, valuations}
+  currentAuction: null,            // active auction or null
+  bidSpeedMs: 2000,                // 2000 (realtime) or 0 (instant)
+  nominationTimerSec: 30,
+  paused: false,
+  drafting: false,
+  log: []
+};
+
+/* ---------- Utility ---------- */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* Box-Muller normal sample */
+function randomNormal(mean = 0, std = 1) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => {
+    if (ms <= 0) return resolve();
+    const tick = () => {
+      if (state.paused) setTimeout(tick, 100);
+      else setTimeout(resolve, ms);
+    };
+    tick();
+  });
+}
+
+/* Promise that waits while paused */
+async function pausedWait() {
+  while (state.paused) await new Promise(r => setTimeout(r, 100));
+}
+
+function fmt$(n) { return '$' + Math.max(0, Math.round(n)); }
+
+function logEntry(msg, cls = '') {
+  state.log.unshift({ msg, cls, t: Date.now() });
+  if (state.log.length > 500) state.log.length = 500;
+  renderLog();
+}
+
+function toast(msg) {
+  const container = $('#toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+
+/* ============================================================
+   SETUP — build teams, shuffle nomination order
+   ============================================================ */
+function initDraft() {
+  // copy players, attach id and "drafted" flag
+  state.players = PLAYERS_DB.map((p, i) => ({
+    id: i,
+    ...p,
+    drafted: false,
+    finalPrice: null,
+    winningTeam: null
+  }));
+  // Fold in learned values from prior drafts (local database)
+  const updated = applyLearnedValues(state.players);
+  if (updated > 0) {
+    logEntry(`Loaded learned values for ${updated} player(s) from prior drafts.`, 'system');
+  }
+
+  // build 12 teams (user is index 0)
+  state.teams = [];
+  state.teams.push(buildTeam(state.userTeamName || 'Your Team', true));
+  const cpuNames = shuffle(CPU_TEAM_NAMES).slice(0, NUM_TEAMS - 1);
+  for (let i = 0; i < NUM_TEAMS - 1; i++) {
+    state.teams.push(buildTeam(cpuNames[i], false));
+  }
+  state.userTeamIndex = 0;
+
+  // shuffle nomination order (fixed for entire draft per spec)
+  const indices = Array.from({ length: NUM_TEAMS }, (_, i) => i);
+  state.nominationOrder = shuffle(indices);
+  state.nominationCursor = 0;
+  state.pickNumber = 1;
+  state.draftHistory = [];
+  state.currentAuction = null;
+  state.drafting = true;
+}
+
+function buildTeam(name, isUser) {
+  return {
+    name,
+    isUser,
+    budget: BUDGET,
+    roster: [],                 // {player, price, slot}
+    posCount: { QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 }
+  };
+}
+
+/* ---------- Roster / constraint helpers ---------- */
+function rosterSlotsLeft(team) {
+  return ROSTER_SIZE - team.roster.length;
+}
+function maxBid(team, forPos = null) {
+  // Reserve $1 for each remaining slot after this purchase,
+  // plus a $1 cushion for any still-unfilled scarce starter (K/DST)
+  // so a team doesn't get priced out of its last must-have pick.
+  // The cushion is waived when this purchase IS the missing K/DST.
+  const slotsAfter = rosterSlotsLeft(team) - 1;
+  let cushion = 0;
+  if (team.posCount.K < 1 && forPos !== 'K') cushion += 1;
+  if (team.posCount.DST < 1 && forPos !== 'DST') cushion += 1;
+  return Math.max(1, team.budget - slotsAfter - cushion);
+}
+function canRosterPos(team, pos) {
+  if (rosterSlotsLeft(team) <= 0) return false;
+  return team.posCount[pos] < POS_MAX[pos];
+}
+function canBid(team, pos, bidAmount) {
+  return canRosterPos(team, pos) && bidAmount <= maxBid(team, pos) && bidAmount >= 1;
+}
+
+function totalBudgetRemaining() {
+  return state.teams.reduce((s, t) => s + t.budget, 0);
+}
+function sumRemainingBaseValues() {
+  return state.players.reduce((s, p) => p.drafted ? s : s + p.baseValue, 0);
+}
+
+/* ============================================================
+   VALUATION MODEL
+   For each team when a player is nominated:
+     base = baseValue + Normal(0, stdDev)
+     market_factor = totalBudgetRemaining / sum(remaining baseValues)
+     team_factor   = team.budget / max(team.budget)  // among eligible teams
+     valuation = max(1, round(base * market_factor * team_factor))
+   ============================================================ */
+function startersNeeded(team, pos) {
+  // How many starters at this pos the team still needs
+  const req = { QB: 1, RB: 2, WR: 2, TE: 1, DST: 1, K: 1 }[pos] || 0;
+  return Math.max(0, req - team.posCount[pos]);
+}
+
+// Hard valuation ceilings for cheap positions — no team will pay more than this
+// even if they're in must-have mode. Keeps K/DST auctions realistic.
+const POS_VALUE_CEILING = { K: 2, DST: 3 };
+
+function computeValuationForTeam(player, team, marketFactor, maxTeamBudget) {
+  if (!canRosterPos(team, player.pos)) return 0;
+  const base = Math.max(0, player.baseValue + randomNormal(0, player.stdDev));
+  const teamFactor = maxTeamBudget > 0 ? team.budget / maxTeamBudget : 0;
+  let v = base * marketFactor * teamFactor;
+
+  // Need-based boost for unfilled starter slots
+  const missing = startersNeeded(team, player.pos);
+  if (missing > 0) v *= 1 + 0.3 * missing;
+
+  // Must-have: if team's remaining slots can't fit all missing starters without this player,
+  // they MUST bid up to whatever they can afford
+  const slotsLeft = rosterSlotsLeft(team);
+  const totalMissing = ['QB', 'RB', 'WR', 'TE', 'DST', 'K']
+    .reduce((s, p) => s + startersNeeded(team, p), 0);
+  let val;
+  if (missing > 0 && slotsLeft <= totalMissing) {
+    val = maxBid(team, player.pos);
+  } else {
+    val = Math.max(1, Math.min(Math.round(v), maxBid(team, player.pos)));
+  }
+
+  // Hard cap for K and DST — cheap commodities, never worth bidding up
+  const ceiling = POS_VALUE_CEILING[player.pos];
+  if (ceiling != null) val = Math.min(val, ceiling);
+  return val;
+}
+
+function buildValuations(player) {
+  const market = totalBudgetRemaining() / Math.max(1, sumRemainingBaseValues());
+  const eligible = state.teams.filter(t => canRosterPos(t, player.pos));
+  const maxTeamBudget = Math.max(0, ...eligible.map(t => t.budget));
+  const valuations = state.teams.map(t => computeValuationForTeam(player, t, market, maxTeamBudget));
+  return { valuations, marketFactor: market };
+}
+
+/* ============================================================
+   DRAFT LOOP — nominate, auction, assign winner, repeat
+   ============================================================ */
+async function runDraft() {
+  while (state.drafting && state.teams.some(t => rosterSlotsLeft(t) > 0)) {
+    await pausedWait();
+    const nominatorIdx = pickNextNominator();
+    if (nominatorIdx === null) break;
+    renderAll();
+    const nominator = state.teams[nominatorIdx];
+
+    let player;
+    if (nominator.isUser) {
+      player = await waitForUserNomination(nominator);
+    } else {
+      await sleep(700);   // small pause so UI catches up
+      player = pickCpuNomination(nominator);
+    }
+    if (!player) {
+      // Nominator can't nominate (shouldn't happen given availability checks); skip
+      advanceNominator();
+      continue;
+    }
+
+    logEntry(`${nominator.name} nominates ${player.name} (${player.posRank}) at $1`, 'nom');
+    await runAuction(player, nominatorIdx);
+    advanceNominator();
+    state.pickNumber++;
+    renderAll();
+  }
+  endDraft();
+}
+
+function pickNextNominator() {
+  // Skip teams that have full rosters
+  for (let safety = 0; safety < NUM_TEAMS * 2; safety++) {
+    const idx = state.nominationOrder[state.nominationCursor % NUM_TEAMS];
+    const t = state.teams[idx];
+    if (rosterSlotsLeft(t) > 0) return idx;
+    state.nominationCursor++;
+  }
+  return null;
+}
+
+function advanceNominator() {
+  state.nominationCursor++;
+}
+
+/* ----- CPU nomination: random top 5 in QB/RB/WR/TE
+        (DST/K only when team has 2 or fewer slots left) ----- */
+const EARLY_ROUND_PICKS = NUM_TEAMS * 5;  // first 5 rounds = 60 picks
+
+function pickCpuNomination(team) {
+  // Early rounds (first 5): random from the top 10 remaining players overall
+  // (filtered to positions this team can still roster)
+  if (state.pickNumber <= EARLY_ROUND_PICKS) {
+    const top10 = state.players
+      .filter(p => !p.drafted && canRosterPos(team, p.pos))
+      .sort((a, b) => b.baseValue - a.baseValue)
+      .slice(0, 10);
+    if (top10.length === 0) return null;
+    return top10[Math.floor(Math.random() * top10.length)];
+  }
+  // After round 5: random top-5 by position (DST/K only in last 2 roster slots)
+  const slotsLeft = rosterSlotsLeft(team);
+  let focusPositions = (slotsLeft <= 2) ? ['DST', 'K'] : ['QB', 'RB', 'WR', 'TE'];
+  const needed = focusPositions.filter(p => canRosterPos(team, p) && startersNeeded(team, p) > 0);
+  const usable = focusPositions.filter(p => canRosterPos(team, p));
+  const pool = needed.length ? needed : usable;
+  if (pool.length === 0) {
+    const all = POSITIONS.filter(p => canRosterPos(team, p));
+    if (!all.length) return null;
+    return pickTopAvailable(all, 5);
+  }
+  return pickTopAvailable(pool, 5);
+}
+function pickTopAvailable(positions, k) {
+  const pos = positions[Math.floor(Math.random() * positions.length)];
+  const pool = state.players
+    .filter(p => !p.drafted && p.pos === pos)
+    .sort((a, b) => b.baseValue - a.baseValue)
+    .slice(0, k);
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ----- User nomination: wait for click, with timer ----- */
+function waitForUserNomination(team) {
+  return new Promise(resolve => {
+    state.userNominationResolver = resolve;
+    const banner = $('#nom-banner-text');
+    banner.innerHTML = `<span class="pulse">YOUR PICK — nominate a player</span>`;
+    const timerEl = $('#nom-banner-timer');
+    const nomPanel = $('#nominate-panel');
+    nomPanel.style.outline = '2px solid var(--user)';
+    renderPlayerSearch(true);   // pass true: enable nominate buttons
+
+    const secs = state.nominationTimerSec;
+    if (secs > 0) {
+      let remaining = secs;
+      const tick = () => {
+        if (!state.userNominationResolver) { timerEl.textContent = ''; return; }
+        if (state.paused) { setTimeout(tick, 250); return; }
+        timerEl.textContent = `${remaining}s`;
+        if (remaining <= 0) {
+          // auto-pick: random top-5 from any position team can roster
+          const player = pickCpuNomination(team) || pickTopAvailable(POSITIONS, 5);
+          finishUserNomination(player);
+        } else {
+          remaining--;
+          setTimeout(tick, 1000);
+        }
+      };
+      tick();
+    } else {
+      timerEl.textContent = '∞';
+    }
+  });
+}
+function finishUserNomination(player) {
+  if (!state.userNominationResolver) return;
+  const resolver = state.userNominationResolver;
+  state.userNominationResolver = null;
+  $('#nom-banner-timer').textContent = '';
+  $('#nominate-panel').style.outline = 'none';
+  renderPlayerSearch(false);   // disable buttons
+  resolver(player);
+}
+
+/* ============================================================
+   AUCTION — bidding rotation until only 1 active bidder
+   ============================================================ */
+async function runAuction(player, nominatorIdx) {
+  const { valuations, marketFactor } = buildValuations(player);
+  // Anyone who can't roster the pos OR has valuation < 1 is "out" from start
+  const active = state.teams.map((t, i) => canRosterPos(t, player.pos) && valuations[i] >= 1);
+  // Nominator must bid at least 1 (always)
+  let highBid = 1;
+  let highBidder = nominatorIdx;
+  active[nominatorIdx] = true;   // nominator implicitly bids $1 (even if they can't afford more it's risky but per spec)
+
+  // If nominator can't afford $1, fail safely
+  if (!canBid(state.teams[nominatorIdx], player.pos, 1)) {
+    // pick first team that can
+    const fallback = state.teams.findIndex(t => canBid(t, player.pos, 1));
+    if (fallback === -1) {
+      logEntry(`${player.name} went unsold — no team eligible.`, 'system');
+      player.drafted = true;     // remove from pool to keep draft moving
+      player.finalPrice = 0;
+      return;
+    }
+    highBidder = fallback;
+  }
+
+  state.currentAuction = {
+    player, valuations, active, highBid, highBidder, nominatorIdx,
+    marketFactor, bidderRotationIdx: (state.nominationOrder.indexOf(nominatorIdx) + 1) % NUM_TEAMS,
+    userBidPromise: null
+  };
+  renderAuctionStage();
+
+  // Bidding loop
+  let safety = 0;
+  while (countActive(active) > 1 && safety < 400) {
+    safety++;
+    await pausedWait();
+
+    // Determine next bidder in rotation
+    const teamIdx = nextBidderInRotation();
+    if (teamIdx === null) break;
+    const team = state.teams[teamIdx];
+
+    // If they're the current high bidder and everyone else has passed, end
+    if (teamIdx === state.currentAuction.highBidder) {
+      // Only their own turn; skip
+      state.currentAuction.bidderRotationIdx = (state.currentAuction.bidderRotationIdx + 1) % NUM_TEAMS;
+      continue;
+    }
+
+    if (team.isUser) {
+      await handleUserBidTurn();
+    } else {
+      await sleep(state.bidSpeedMs);
+      await pausedWait();
+      handleCpuBidTurn(teamIdx);
+    }
+    renderAuctionStage();
+    renderTeams();
+  }
+
+  // Right of last refusal for user if user isn't winner
+  await offerLastRefusal();
+
+  // Award player
+  awardPlayer();
+  state.currentAuction = null;
+  renderAll();
+}
+
+function countActive(active) {
+  return active.filter(Boolean).length;
+}
+
+function nextBidderInRotation() {
+  const a = state.currentAuction;
+  for (let i = 0; i < NUM_TEAMS; i++) {
+    const idx = state.nominationOrder[(a.bidderRotationIdx + i) % NUM_TEAMS];
+    if (a.active[idx]) {
+      a.bidderRotationIdx = (a.bidderRotationIdx + i + 1) % NUM_TEAMS;
+      return idx;
+    }
+  }
+  return null;
+}
+
+/* CPU decision: bid currentBid+1 if their valuation > currentBid AND they can afford */
+function handleCpuBidTurn(teamIdx) {
+  const a = state.currentAuction;
+  const team = state.teams[teamIdx];
+  const myVal = a.valuations[teamIdx];
+  const nextBid = a.highBid + 1;
+  if (nextBid > myVal || !canBid(team, a.player.pos, nextBid)) {
+    a.active[teamIdx] = false;
+    logEntry(`${team.name} passes at ${fmt$(a.highBid)}`, 'pass');
+  } else {
+    a.highBid = nextBid;
+    a.highBidder = teamIdx;
+    logEntry(`${team.name} bids ${fmt$(nextBid)} on ${a.player.name}`, 'bid');
+  }
+}
+
+/* User turn: show bid / pass buttons, wait for click or short timer */
+function handleUserBidTurn() {
+  return new Promise(resolve => {
+    const a = state.currentAuction;
+    const userIdx = state.userTeamIndex;
+    const team = state.teams[userIdx];
+    const nextBid = a.highBid + 1;
+    const canAfford = canBid(team, a.player.pos, nextBid);
+    const banner = $('#nom-banner-timer');
+    let answered = false;
+
+    const finishWith = (action) => {
+      if (answered) return;
+      answered = true;
+      banner.textContent = '';
+      window._userBidHandler = null;
+      if (action === 'bid' && canAfford) {
+        a.highBid = nextBid;
+        a.highBidder = userIdx;
+        logEntry(`YOU bid ${fmt$(nextBid)} on ${a.player.name}`, 'user');
+      } else {
+        a.active[userIdx] = false;
+        logEntry(`You pass at ${fmt$(a.highBid)}`, 'pass');
+      }
+      resolve();
+    };
+
+    window._userBidHandler = finishWith;
+    renderAuctionStage();
+
+    // Auto-pass after bid timer length if user doesn't decide
+    if (state.bidSpeedMs > 0) {
+      let remaining = Math.max(8, Math.floor(state.bidSpeedMs / 1000));
+      const tick = () => {
+        if (answered) return;
+        if (state.paused) { setTimeout(tick, 250); return; }
+        banner.textContent = `Your turn — ${remaining}s`;
+        if (remaining <= 0) finishWith('pass');
+        else { remaining--; setTimeout(tick, 1000); }
+      };
+      tick();
+    } else {
+      // instant mode: brief 1s window so user can click
+      banner.textContent = `Your turn — click bid or pass`;
+      setTimeout(() => finishWith('pass'), 1500);
+    }
+  });
+}
+
+/* Right of last refusal: if user team is eligible, isn't highBidder,
+   and hasn't been bid out, give them a chance */
+async function offerLastRefusal() {
+  const a = state.currentAuction;
+  const userIdx = state.userTeamIndex;
+  const team = state.teams[userIdx];
+  if (!team.isUser) return;                        // skip when auto-finishing
+  if (a.highBidder === userIdx) return;
+  if (!canBid(team, a.player.pos, a.highBid + 1)) return;
+  // If user has already explicitly passed, still offer per spec ("right of last refusal")
+  logEntry(`Right of last refusal — you can bid ${fmt$(a.highBid + 1)} or pass`, 'user');
+
+  return new Promise(resolve => {
+    const banner = $('#nom-banner-timer');
+    let answered = false;
+    const finish = (action) => {
+      if (answered) return;
+      answered = true;
+      banner.textContent = '';
+      window._userBidHandler = null;
+      if (action === 'bid') {
+        a.highBid += 1;
+        a.highBidder = userIdx;
+        logEntry(`YOU exercise right of last refusal at ${fmt$(a.highBid)}!`, 'user');
+        a.active = a.active.map((_, i) => i === userIdx);  // user takes it
+      }
+      resolve();
+    };
+    window._userBidHandler = finish;
+    // Force re-render so bid/pass buttons appear
+    a.active[userIdx] = true;
+    renderAuctionStage();
+
+    const t = state.bidSpeedMs > 0 ? Math.max(8, Math.floor(state.bidSpeedMs / 1000)) : 6;
+    let remaining = t;
+    const tick = () => {
+      if (answered) return;
+      if (state.paused) { setTimeout(tick, 250); return; }
+      banner.textContent = `Last refusal — ${remaining}s`;
+      if (remaining <= 0) finish('pass');
+      else { remaining--; setTimeout(tick, 1000); }
+    };
+    tick();
+  });
+}
+
+function awardPlayer() {
+  const a = state.currentAuction;
+  const winner = state.teams[a.highBidder];
+  const price = a.highBid;
+  const player = a.player;
+
+  winner.budget -= price;
+  winner.posCount[player.pos] += 1;
+  winner.roster.push({
+    player,
+    price,
+    slot: assignSlot(winner, player)
+  });
+  player.drafted = true;
+  player.finalPrice = price;
+  player.winningTeam = winner.name;
+
+  state.draftHistory.push({
+    pick: state.pickNumber,
+    player,
+    team: winner.name,
+    price,
+    valuations: a.valuations.slice(),
+    marketFactor: a.marketFactor
+  });
+
+  logEntry(`✓ ${winner.name} wins ${player.name} for ${fmt$(price)}`, 'win');
+}
+
+function assignSlot(team, player) {
+  // First pass: try the starter slot if open
+  const starterOrder = {
+    QB: ['QB'], RB: ['RB1', 'RB2', 'FLEX'], WR: ['WR1', 'WR2', 'FLEX'],
+    TE: ['TE', 'FLEX'], DST: ['DST'], K: ['K']
+  };
+  const occupied = new Set(team.roster.map(r => r.slot));
+  for (const slot of (starterOrder[player.pos] || [])) {
+    if (!occupied.has(slot)) return slot;
+  }
+  // Bench slot
+  let idx = 1;
+  while (occupied.has(`B${idx}`)) idx++;
+  return `B${idx}`;
+}
+
+/* ============================================================
+   END OF DRAFT + PERSISTENCE + LEARNING
+   ============================================================
+   We accumulate per-player price observations in localStorage and
+   blend them with the original baseValue/stdDev using a simple
+   Bayesian update. PRIOR_WEIGHT controls how much the original
+   database is trusted vs. observed prices.
+   ============================================================ */
+const STORAGE_KEY = 'ffaction_bid_history';
+const PRIOR_WEIGHT = 5;     // pseudo-observations for original baseValue
+const STD_FLOOR = 0.5;      // never let stdDev collapse below this
+
+function loadBidHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function appendBidHistory(records) {
+  try {
+    const prior = loadBidHistory();
+    prior.push({ draftId: Date.now(), records });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prior));
+    return true;
+  } catch (e) {
+    console.warn('localStorage save failed', e);
+    return false;
+  }
+}
+
+/* Build a map: playerName -> [prices] from all prior drafts */
+function aggregateHistory() {
+  const out = {};
+  for (const draft of loadBidHistory()) {
+    for (const r of (draft.records || [])) {
+      if (!r || !r.name || typeof r.finalPrice !== 'number') continue;
+      (out[r.name] = out[r.name] || []).push(r.finalPrice);
+    }
+  }
+  return out;
+}
+
+/* Mutate PLAYERS_DB-derived player records in-place with learned values */
+function applyLearnedValues(players) {
+  const hist = aggregateHistory();
+  let updated = 0;
+  for (const p of players) {
+    const obs = hist[p.name];
+    if (!obs || obs.length === 0) continue;
+    const n = obs.length;
+    const sum = obs.reduce((s, v) => s + v, 0);
+    // Posterior mean: weighted average of prior baseValue (count=PRIOR_WEIGHT) and obs (count=n)
+    const newBase = (p.baseValue * PRIOR_WEIGHT + sum) / (PRIOR_WEIGHT + n);
+    // Posterior std: blend prior stdDev with sample stddev once we have >=2 obs
+    let newStd = p.stdDev;
+    if (n >= 2) {
+      const mean = sum / n;
+      const variance = obs.reduce((s, v) => s + (v - mean) ** 2, 0) / (n - 1);
+      const sampleStd = Math.sqrt(variance);
+      // weighted blend
+      newStd = (p.stdDev * PRIOR_WEIGHT + sampleStd * n) / (PRIOR_WEIGHT + n);
+    }
+    p.baseValue = Math.max(1, Math.round(newBase * 100) / 100);
+    p.stdDev = Math.max(STD_FLOOR, Math.round(newStd * 1000) / 1000);
+    p._learnedFromN = n;
+    updated++;
+  }
+  return updated;
+}
+
+function endDraft() {
+  state.drafting = false;
+  state.currentAuction = null;
+  // Auto-save bids to local database (improves future drafts)
+  const records = state.draftHistory.map(h => ({
+    name: h.player.name,
+    pos: h.player.posRank,
+    baseValue: h.player.baseValue,
+    stdDev: h.player.stdDev,
+    finalPrice: h.price,
+    winningTeam: h.team,
+    pick: h.pick,
+    timestamp: Date.now()
+  }));
+  const ok = appendBidHistory(records);
+  showScreen('results');
+  renderResults();
+  if (ok) toast(`Saved ${records.length} bids to local database — values will refine on next draft.`);
+}
+
+function buildCsv() {
+  const rows = [['Pick', 'Player', 'Pos', 'Team', 'Winning Team', 'Price', 'Base Value', 'StdDev']];
+  const sorted = state.draftHistory.slice().sort((a, b) => a.pick - b.pick);
+  for (const h of sorted) {
+    rows.push([
+      h.pick, h.player.name, h.player.posRank, h.player.team,
+      h.team, h.price, h.player.baseValue, h.player.stdDev
+    ]);
+  }
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+}
+
+function downloadCsv() {
+  const csv = buildCsv();
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `auction-draft-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('CSV downloaded');
+}
+
+function buildEmailBody() {
+  const lines = [
+    `Fantasy Auction Draft Results — ${new Date().toLocaleDateString()}`,
+    `Your team: ${state.userTeamName}`,
+    ''
+  ];
+  for (const t of state.teams) {
+    lines.push(`=== ${t.name}${t.isUser ? ' (You)' : ''} — Spent $${BUDGET - t.budget}, Left $${t.budget} ===`);
+    for (const r of t.roster) {
+      lines.push(`  ${r.slot.padEnd(5)} ${r.player.name} (${r.player.posRank}, ${r.player.team}) - $${r.price}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+/* Real email delivery via FormSubmit (https://formsubmit.co — free, no signup).
+   The very first message to a given address triggers a one-time confirmation
+   email; once the user clicks the activation link, subsequent emails deliver
+   straight to their inbox. */
+async function emailResults() {
+  const email = (state.userEmail || '').trim();
+  if (!email) {
+    toast('No email set — add one on the setup screen and try again.');
+    return;
+  }
+  toast('Sending email…');
+  const body = buildEmailBody();
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject: 'Your auction draft results',
+        _captcha: 'false',
+        _template: 'box',
+        team: state.userTeamName,
+        message: body
+      })
+    });
+    let json = {};
+    try { json = await res.json(); } catch (e) {}
+    if (res.ok && (json.success === 'true' || json.success === true)) {
+      toast(`Results emailed to ${email} ✓`);
+    } else if (json.message && /activate|confirm/i.test(json.message)) {
+      toast(`Activation email sent to ${email}. Click the link in your inbox, then press Email Results again.`);
+    } else {
+      toast(`Email failed (${res.status}). Falling back to mailto.`);
+      const href = `mailto:${email}?subject=${encodeURIComponent('Your auction draft results')}&body=${encodeURIComponent(body)}`;
+      window.open(href, '_blank');
+    }
+  } catch (e) {
+    toast(`Email error: ${e.message}. Opening mailto fallback.`);
+    const href = `mailto:${email}?subject=${encodeURIComponent('Your auction draft results')}&body=${encodeURIComponent(body)}`;
+    window.open(href, '_blank');
+  }
+  // Always download CSV alongside
+  downloadCsv();
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+function showScreen(name) {
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#screen-' + name).classList.add('active');
+}
+
+function renderAll() {
+  renderTopBar();
+  renderTeams();
+  renderUserRoster();
+  renderPlayerSearch();
+  renderAuctionStage();
+  renderLog();
+}
+
+function renderTopBar() {
+  const user = state.teams[state.userTeamIndex];
+  $('#pick-num').textContent = state.pickNumber;
+  const nomIdx = state.nominationOrder[state.nominationCursor % NUM_TEAMS];
+  $('#nominator-name').textContent = state.teams[nomIdx] ? state.teams[nomIdx].name : '—';
+  $('#user-budget').textContent = fmt$(user.budget);
+  $('#user-slots').textContent = rosterSlotsLeft(user);
+  $('#user-maxbid').textContent = fmt$(maxBid(user));
+}
+
+function renderTeams() {
+  const div = $('#teams-list');
+  const nomIdx = state.nominationOrder[state.nominationCursor % NUM_TEAMS];
+  const a = state.currentAuction;
+  div.innerHTML = state.teams.map((t, i) => {
+    const cls = ['team-card'];
+    if (t.isUser) cls.push('user');
+    if (i === nomIdx && !a) cls.push('nominating');
+    if (a && a.active[i]) cls.push('bidding');
+    const posPills = POSITIONS.map(p =>
+      `<span class="pos-pill">${p} ${t.posCount[p]}/${POS_MAX[p]}</span>`
+    ).join('');
+    return `<div class="${cls.join(' ')}">
+      <div class="top"><span class="name">${escapeHtml(t.name)}${t.isUser ? ' (You)' : ''}</span>
+        <span class="money">${fmt$(t.budget)}</span></div>
+      <div class="roster">${rosterSlotsLeft(t)} slots · max bid ${fmt$(maxBid(t))}<br>${posPills}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderUserRoster() {
+  const user = state.teams[state.userTeamIndex];
+  const tbody = $('#user-roster-table tbody');
+  // Display starter slots in fixed order
+  const slotOrder = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'TE', 'FLEX', 'DST', 'K'];
+  const benchSlots = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
+  const allSlots = slotOrder.concat(benchSlots);
+  tbody.innerHTML = allSlots.map(slot => {
+    const r = user.roster.find(x => x.slot === slot);
+    if (r) {
+      return `<tr><td class="slot">${slot}</td><td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span></td><td class="price">$${r.price}</td></tr>`;
+    }
+    return `<tr style="opacity:0.5"><td class="slot">${slot}</td><td>—</td><td class="price">—</td></tr>`;
+  }).join('');
+}
+
+function renderPlayerSearch(enableNominate = null) {
+  const search = $('#player-search').value.trim().toLowerCase();
+  const filter = $('#pos-filter').value;
+  const userTurn = !!state.userNominationResolver;
+  const enable = (enableNominate === null) ? userTurn : enableNominate;
+
+  let pool = state.players.filter(p => !p.drafted);
+  if (filter !== 'ALL') pool = pool.filter(p => p.pos === filter);
+  if (search) pool = pool.filter(p =>
+    p.name.toLowerCase().includes(search) ||
+    p.team.toLowerCase().includes(search)
+  );
+  pool = pool.sort((a, b) => b.baseValue - a.baseValue).slice(0, 80);
+
+  $('#player-search-results').innerHTML = pool.map(p => {
+    const canNom = enable;
+    return `<div class="player-row${canNom ? '' : ' disabled'}">
+      <span><strong>${escapeHtml(p.name)}</strong> <span style="color:var(--muted)">${escapeHtml(p.team)}</span></span>
+      <span class="pos">${p.posRank}</span>
+      <button data-pid="${p.id}" onclick="userNominate(${p.id})" ${canNom ? '' : 'disabled'}>Nominate</button>
+    </div>`;
+  }).join('');
+}
+
+window.userNominate = function (pid) {
+  if (!state.userNominationResolver) return;
+  const player = state.players.find(p => p.id === pid);
+  if (!player || player.drafted) return;
+  const nomIdx = state.nominationOrder[state.nominationCursor % NUM_TEAMS];
+  const team = state.teams[nomIdx];
+  if (!canRosterPos(team, player.pos)) {
+    toast(`You can't roster another ${player.pos}.`);
+    return;
+  }
+  finishUserNomination(player);
+};
+
+function renderAuctionStage() {
+  const c = $('#auction-content');
+  const a = state.currentAuction;
+  const banner = $('#nom-banner-text');
+  if (!a) {
+    if (state.userNominationResolver) {
+      banner.innerHTML = `<span class="pulse" style="color:var(--user)">YOUR PICK — nominate a player</span>`;
+    } else {
+      banner.textContent = `Pick ${state.pickNumber} — waiting…`;
+    }
+    if (!state.userNominationResolver) {
+      c.innerHTML = `<p style="text-align:center; color:var(--muted); padding: 40px 0">Awaiting nomination…</p>`;
+    }
+    return;
+  }
+  banner.textContent = `Pick ${state.pickNumber} — Auction in progress`;
+  const winner = state.teams[a.highBidder];
+  const userIdx = state.userTeamIndex;
+  const userTeam = state.teams[userIdx];
+  const myVal = a.valuations[userIdx];
+  const canIBid = canBid(userTeam, a.player.pos, a.highBid + 1) && a.active[userIdx];
+
+  c.innerHTML = `
+    <div class="player-card">
+      <div>
+        <div class="name">${escapeHtml(a.player.name)}</div>
+        <div class="meta">${a.player.posRank} · ${escapeHtml(a.player.team)}</div>
+      </div>
+      <div class="stats">
+        Active bidders: <strong>${countActive(a.active)} / ${NUM_TEAMS}</strong>
+      </div>
+    </div>
+    <div class="bid-display">
+      <div style="color:var(--muted); font-size:12px">CURRENT BID</div>
+      <div class="bid-amount">${fmt$(a.highBid)}</div>
+      <div class="bid-holder">High bidder: <strong>${escapeHtml(winner.name)}</strong></div>
+    </div>
+    <div class="bid-actions">
+      <button class="bid" onclick="window._userBidHandler && window._userBidHandler('bid')" ${canIBid ? '' : 'disabled'}>
+        Bid ${fmt$(a.highBid + 1)}
+      </button>
+      <button class="pass" onclick="window._userBidHandler && window._userBidHandler('pass')" ${a.active[userIdx] ? '' : 'disabled'}>
+        Pass
+      </button>
+    </div>
+    <div style="text-align:center; color: var(--muted); font-size: 12px; margin-top: 10px">
+      ${canIBid ? 'You can bid up to ' + fmt$(maxBid(userTeam)) : (a.active[userIdx] ? 'You can\'t afford the next bid' : 'You\'ve passed')}
+    </div>
+  `;
+}
+
+function renderLog() {
+  const el = $('#log');
+  if (!el) return;
+  el.innerHTML = state.log.slice(0, 80).map(e =>
+    `<div class="entry ${e.cls}">${escapeHtml(e.msg)}</div>`
+  ).join('');
+}
+
+function renderResults() {
+  $('#results-summary').innerHTML =
+    `Total picks: <strong>${state.draftHistory.length}</strong> ·
+     Average price: <strong>$${(state.draftHistory.reduce((s, h) => s + h.price, 0) / Math.max(1, state.draftHistory.length)).toFixed(1)}</strong>`;
+  const grid = $('#results-grid');
+  // Sort teams by total spent descending
+  const teamsSorted = state.teams.slice().sort((a, b) => (BUDGET - a.budget) - (BUDGET - b.budget)).reverse();
+  grid.innerHTML = teamsSorted.map(t => {
+    const sorted = t.roster.slice().sort((a, b) => b.price - a.price);
+    const totalSpent = sorted.reduce((s, r) => s + r.price, 0);
+    return `<div class="result-team ${t.isUser ? 'user' : ''}">
+      <h3>${escapeHtml(t.name)}${t.isUser ? ' (You)' : ''}</h3>
+      <div style="color:var(--muted); font-size:12px; margin-bottom:6px">
+        Spent $${totalSpent} · ${t.roster.length} players · $${t.budget} unspent
+      </div>
+      <table><tbody>
+        ${sorted.map(r => `<tr>
+          <td style="width:32px; color:var(--muted)">${r.slot}</td>
+          <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span></td>
+          <td class="price">$${r.price}</td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  $('#start-draft-btn').addEventListener('click', startDraft);
+  $('#pause-btn').addEventListener('click', togglePause);
+  $('#speed-toggle').addEventListener('click', toggleSpeed);
+  $('#end-draft-btn').addEventListener('click', autoFinishDraft);
+  $('#player-search').addEventListener('input', () => renderPlayerSearch());
+  $('#pos-filter').addEventListener('change', () => renderPlayerSearch());
+  $('#email-results-btn').addEventListener('click', emailResults);
+  $('#csv-download-btn').addEventListener('click', downloadCsv);
+  $('#new-draft-btn').addEventListener('click', () => location.reload());
+
+});
+
+/* Convert user team to CPU and let the draft finish itself */
+function autoFinishDraft() {
+  if (!state.drafting) return;
+  if (!confirm('Auto-finish the rest of the draft? Your remaining picks will be made automatically.')) return;
+  const userIdx = state.userTeamIndex;
+  state.teams[userIdx].isUser = false;
+  state.teams[userIdx].name = state.teams[userIdx].name + ' (auto)';
+  logEntry(`You handed control to autopilot — finishing the draft.`, 'system');
+
+  // If we're currently waiting on a user nomination, resolve it with a CPU pick
+  if (state.userNominationResolver) {
+    const nomIdx = state.nominationOrder[state.nominationCursor % NUM_TEAMS];
+    const team = state.teams[nomIdx];
+    const player = pickCpuNomination(team) || pickTopAvailable(POSITIONS, 5);
+    finishUserNomination(player);
+  }
+  // If we're currently waiting on a user bid prompt, resolve it as a CPU bid decision
+  if (window._userBidHandler && state.currentAuction) {
+    const a = state.currentAuction;
+    const team = state.teams[userIdx];
+    const myVal = a.valuations[userIdx];
+    const nextBid = a.highBid + 1;
+    if (nextBid <= myVal && canBid(team, a.player.pos, nextBid)) {
+      window._userBidHandler('bid');
+    } else {
+      window._userBidHandler('pass');
+    }
+  }
+  // Hide nomination UI styling
+  const np = $('#nominate-panel');
+  if (np) np.style.outline = 'none';
+  renderAll();
+}
+
+function startDraft() {
+  const name = $('#user-team-name').value.trim() || 'Your Team';
+  state.userTeamName = name;
+  state.userEmail = $('#user-email').value.trim();
+  state.bidSpeedMs = parseInt($('#bid-speed').value, 10);
+  state.nominationTimerSec = parseInt($('#nom-timer-len').value, 10);
+  updateSpeedToggleLabel();
+  initDraft();
+  showScreen('draft');
+  logEntry(`Draft starting — nomination order set.`, 'system');
+  const order = state.nominationOrder.map(i => state.teams[i].name).join(' → ');
+  logEntry(`Order: ${order}`, 'system');
+  renderAll();
+  runDraft();
+}
+
+function togglePause() {
+  state.paused = !state.paused;
+  $('#pause-btn').textContent = state.paused ? 'Resume' : 'Pause';
+}
+
+function toggleSpeed() {
+  state.bidSpeedMs = state.bidSpeedMs > 0 ? 0 : 2000;
+  updateSpeedToggleLabel();
+}
+function updateSpeedToggleLabel() {
+  $('#speed-toggle').textContent = state.bidSpeedMs > 0 ? `Pace: Realtime (2s)` : `Pace: Instant`;
+}
+
+</script>
+</body>
+</html>
