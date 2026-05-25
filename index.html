@@ -290,6 +290,27 @@
     color: var(--text);
     opacity: 0.6;
   }
+
+  /* About card */
+  .about-card { line-height: 1.55; }
+  .about-card p { margin: 8px 0; color: var(--text); }
+  .about-card ul li { margin-bottom: 4px; }
+
+  /* Footer */
+  .site-footer {
+    text-align: center;
+    padding: 24px 0 8px 0;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    margin-top: 28px;
+  }
+  .site-footer a {
+    color: var(--muted);
+    text-decoration: none;
+    margin: 0 8px;
+  }
+  .site-footer a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -344,6 +365,31 @@
       <!-- Drop your ad tag (e.g., Google AdSense <ins> block) inside this div -->
     </div>
   </div>
+
+  <div class="card about-card">
+    <h3>About this simulator</h3>
+    <p>This is a practice tool for <strong>auction-style</strong> fantasy football drafts &mdash; the format where every team starts with the same budget and bids on each player, rather than picking in turn from a list. Auction drafts let you build any roster you can afford, which makes them more strategic but also harder to prepare for, since there's no draft board to memorize.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">How to use it</h4>
+    <p style="margin: 4px 0">Enter your team name and tweak the settings above, then click <em>Start Draft</em>. You'll be dropped into a live 12-team auction with a $200 budget and 16 roster spots. When it's your turn to nominate, search for the player you want to throw into the pool and set a starting bid. When the other 11 computer GMs nominate, you decide whether to bid, increase the bid, or let them have the player at the current price.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Strategy ideas to practice</h4>
+    <ul style="margin: 4px 0; padding-left: 22px; color: var(--text)">
+      <li><strong>Stars-and-scrubs</strong> &mdash; spend most of your budget on 2&ndash;3 elite players and fill the rest of your roster cheaply.</li>
+      <li><strong>Balanced build</strong> &mdash; spread $15&ndash;$30 across most of your starters and avoid any single dominant player.</li>
+      <li><strong>Price enforcer</strong> &mdash; bid up players you don't want to drain opponents' budgets, but be careful not to get stuck owning them.</li>
+      <li><strong>Late-round savings</strong> &mdash; figure out the minimum you can spend on QB, K, and DST so you have more to work with on RB and WR.</li>
+    </ul>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">What this site is not</h4>
+    <p style="margin: 4px 0">This is a free hobby project. It is not affiliated with the NFL, ESPN, Yahoo, or any actual fantasy platform. Player values are baseline estimates and should not be your only source for real draft prep. Use it to get comfortable with bidding pace and budget management, then check current rankings before your real draft.</p>
+  </div>
+
+  <footer class="site-footer">
+    <a href="/privacy.html">Privacy</a> &middot;
+    <a href="/terms.html">Terms</a> &middot;
+    <a href="mailto:bradengeraldo@gmail.com">Contact</a>
+  </footer>
 </div>
 
 <!-- ========== DRAFT SCREEN ========== -->
@@ -419,6 +465,21 @@
         <div id="teams-list"></div>
       </div>
 
+      <div class="panel" style="margin-top:14px">
+        <h3>Recent Picks</h3>
+        <table class="roster-table" id="recent-picks-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Pos</th>
+              <th class="price">$</th>
+              <th>Team</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
       <!-- Ad slot (300x250 medium rectangle) -->
       <div class="ad-slot" aria-label="Advertisement">
         <div class="ad-slot-inner" id="ad-slot-draft">
@@ -429,6 +490,12 @@
       </div>
     </div>
   </div>
+
+  <footer class="site-footer">
+    <a href="/privacy.html">Privacy</a> &middot;
+    <a href="/terms.html">Terms</a> &middot;
+    <a href="mailto:bradengeraldo@gmail.com">Contact</a>
+  </footer>
 </div>
 
 <!-- ========== RESULTS SCREEN ========== -->
@@ -546,7 +613,7 @@ function toast(msg) {
 /* ============================================================
    SETUP — build teams, shuffle nomination order
    ============================================================ */
-function initDraft() {
+async function initDraft() {
   // copy players, attach id and "drafted" flag
   state.players = PLAYERS_DB.map((p, i) => ({
     id: i,
@@ -555,10 +622,11 @@ function initDraft() {
     finalPrice: null,
     winningTeam: null
   }));
-  // Fold in learned values from prior drafts (local database)
-  const updated = applyLearnedValues(state.players);
+  // Fetch shared Firestore prices, then blend with local history
+  const firestorePrices = await fetchFirestorePrices();
+  const updated = applyLearnedValues(state.players, firestorePrices, BUDGET);
   if (updated > 0) {
-    logEntry(`Loaded learned values for ${updated} player(s) from prior drafts.`, 'system');
+    logEntry(`Loaded learned values for ${updated} player(s) based on your prior draft prices.`, 'system');
   }
 
   // build 12 teams (user is index 0)
@@ -1052,6 +1120,8 @@ function assignSlot(team, player) {
    blend them with the original baseValue/stdDev using a simple
    Bayesian update. PRIOR_WEIGHT controls how much the original
    database is trusted vs. observed prices.
+   Only prices the USER paid are recorded — AI bids are excluded
+   because they can be inflated by nomination order and budget effects.
    ============================================================ */
 const STORAGE_KEY = 'ffaction_bid_history';
 const PRIOR_WEIGHT = 5;     // pseudo-observations for original baseValue
@@ -1086,29 +1156,46 @@ function aggregateHistory() {
   return out;
 }
 
-/* Mutate PLAYERS_DB-derived player records in-place with learned values */
-function applyLearnedValues(players) {
-  const hist = aggregateHistory();
+/* Mutate PLAYERS_DB-derived player records in-place with learned values.
+   Combines two sources:
+     - localHist: raw prices from this browser's localStorage (user-won, same budget)
+     - firestorePrices: normalized sums from all users (stored as price/budget fractions)
+   Firestore prices are denormalized back to dollar values using the current draft budget
+   before being blended, so cross-league data stays comparable. */
+function applyLearnedValues(players, firestorePrices = {}, budget = BUDGET) {
+  const localHist = aggregateHistory();
   let updated = 0;
   for (const p of players) {
-    const obs = hist[p.name];
-    if (!obs || obs.length === 0) continue;
-    const n = obs.length;
-    const sum = obs.reduce((s, v) => s + v, 0);
-    // Posterior mean: weighted average of prior baseValue (count=PRIOR_WEIGHT) and obs (count=n)
-    const newBase = (p.baseValue * PRIOR_WEIGHT + sum) / (PRIOR_WEIGHT + n);
-    // Posterior std: blend prior stdDev with sample stddev once we have >=2 obs
+    // --- local observations (raw dollar prices) ---
+    const localObs = localHist[p.name] || [];
+    const localN   = localObs.length;
+    const localSum = localObs.reduce((s, v) => s + v, 0);
+
+    // --- Firestore observations (denormalize: stored fraction × current budget) ---
+    const fsData = firestorePrices[p.name];
+    const fsN    = fsData ? fsData.count : 0;
+    const fsSum  = fsData ? fsData.sum * budget : 0;  // denormalize
+
+    const totalN   = localN + fsN;
+    const totalSum = localSum + fsSum;
+
+    if (totalN === 0) continue;
+
+    // Posterior mean: Bayesian blend of original base (PRIOR_WEIGHT pseudo-obs) + all observations
+    const newBase = (p.baseValue * PRIOR_WEIGHT + totalSum) / (PRIOR_WEIGHT + totalN);
+
+    // Posterior std: only computable from local raw values (Firestore stores sum/count, not variance)
     let newStd = p.stdDev;
-    if (n >= 2) {
-      const mean = sum / n;
-      const variance = obs.reduce((s, v) => s + (v - mean) ** 2, 0) / (n - 1);
+    if (localN >= 2) {
+      const localMean = localSum / localN;
+      const variance  = localObs.reduce((s, v) => s + (v - localMean) ** 2, 0) / (localN - 1);
       const sampleStd = Math.sqrt(variance);
-      // weighted blend
-      newStd = (p.stdDev * PRIOR_WEIGHT + sampleStd * n) / (PRIOR_WEIGHT + n);
+      newStd = (p.stdDev * PRIOR_WEIGHT + sampleStd * localN) / (PRIOR_WEIGHT + localN);
     }
-    p.baseValue = Math.max(1, Math.round(newBase * 100) / 100);
-    p.stdDev = Math.max(STD_FLOOR, Math.round(newStd * 1000) / 1000);
-    p._learnedFromN = n;
+
+    p.baseValue    = Math.max(1, Math.round(newBase * 100) / 100);
+    p.stdDev       = Math.max(STD_FLOOR, Math.round(newStd * 1000) / 1000);
+    p._learnedFromN = totalN;
     updated++;
   }
   return updated;
@@ -1117,21 +1204,28 @@ function applyLearnedValues(players) {
 function endDraft() {
   state.drafting = false;
   state.currentAuction = null;
-  // Auto-save bids to local database (improves future drafts)
-  const records = state.draftHistory.map(h => ({
-    name: h.player.name,
-    pos: h.player.posRank,
-    baseValue: h.player.baseValue,
-    stdDev: h.player.stdDev,
-    finalPrice: h.price,
-    winningTeam: h.team,
-    pick: h.pick,
-    timestamp: Date.now()
-  }));
-  const ok = appendBidHistory(records);
+  // Auto-save only user-won players to local database (improves future drafts)
+  // We only learn from prices the user chose to pay — AI bids are noise, not signal.
+  const userTeamName = state.userTeamName || 'Your Team';
+  const records = state.draftHistory
+    .filter(h => h.team === userTeamName)
+    .map(h => ({
+      name: h.player.name,
+      pos: h.player.posRank,
+      baseValue: h.player.baseValue,
+      stdDev: h.player.stdDev,
+      finalPrice: h.price,
+      winningTeam: h.team,
+      pick: h.pick,
+      timestamp: Date.now()
+    }));
+  const ok = records.length > 0 && appendBidHistory(records);
+  // Share prices with all users via Firestore (normalized by budget, fire-and-forget)
+  submitToFirestore(records, BUDGET);
   showScreen('results');
   renderResults();
-  if (ok) toast(`Saved ${records.length} bids to local database — values will refine on next draft.`);
+  if (ok) toast(`Saved ${records.length} player${records.length !== 1 ? 's' : ''} you drafted — sharing prices with the community.`);
+  else if (records.length === 0) toast('No players drafted by you — nothing saved.');
 }
 
 function buildCsv() {
@@ -1235,6 +1329,28 @@ function renderAll() {
   renderPlayerSearch();
   renderAuctionStage();
   renderLog();
+  renderRecentPicks();
+}
+
+function renderRecentPicks() {
+  const tbody = $('#recent-picks-table tbody');
+  if (!tbody) return;
+  const recent = state.draftHistory.slice(-5).reverse();
+  if (recent.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:10px 0">No picks yet</td></tr>`;
+    return;
+  }
+  const userTeamName = state.userTeamName || 'Your Team';
+  tbody.innerHTML = recent.map(h => {
+    const isUser = h.team === userTeamName;
+    const teamStyle = isUser ? 'color:var(--user);font-weight:600' : '';
+    return `<tr>
+      <td style="font-weight:500">${h.player.name}</td>
+      <td style="color:var(--muted)">${h.player.pos}</td>
+      <td class="price">${fmt$(h.price)}</td>
+      <td style="${teamStyle}">${isUser ? 'You' : h.team}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderTopBar() {
@@ -1460,14 +1576,19 @@ function autoFinishDraft() {
   renderAll();
 }
 
-function startDraft() {
+async function startDraft() {
+  const btn = $('#start-draft-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading values…';
   const name = $('#user-team-name').value.trim() || 'Your Team';
   state.userTeamName = name;
   state.userEmail = $('#user-email').value.trim();
   state.bidSpeedMs = parseInt($('#bid-speed').value, 10);
   state.nominationTimerSec = parseInt($('#nom-timer-len').value, 10);
   updateSpeedToggleLabel();
-  initDraft();
+  await initDraft();
+  btn.disabled = false;
+  btn.textContent = 'Start Draft';
   showScreen('draft');
   logEntry(`Draft starting — nomination order set.`, 'system');
   const order = state.nominationOrder.map(i => state.teams[i].name).join(' → ');
@@ -1489,6 +1610,60 @@ function updateSpeedToggleLabel() {
   $('#speed-toggle').textContent = state.bidSpeedMs > 0 ? `Pace: Realtime (2s)` : `Pace: Instant`;
 }
 
+</script>
+
+<!-- Firebase SDK (auto-configured by Firebase Hosting — no API keys needed here) -->
+<script src="/__/firebase/11.8.1/firebase-app-compat.js"></script>
+<script src="/__/firebase/11.8.1/firebase-firestore-compat.js"></script>
+<script src="/__/firebase/init.js"></script>
+<script>
+/* ============================================================
+   FIRESTORE — shared price learning across all users
+   ============================================================
+   playerPrices/{playerName} stores a running sum of normalized
+   prices (finalPrice / BUDGET) and a count of observations.
+   On draft start we fetch the collection and denormalize back to
+   dollar values for the Bayesian blend. Writes are user-won
+   players only, normalized so cross-budget data stays comparable.
+   Graceful fallback to local-only if Firestore is unavailable.
+   ============================================================ */
+let db = null;
+try {
+  db = firebase.firestore();
+} catch (e) {
+  console.warn('Firestore unavailable — falling back to local-only learning.', e);
+}
+
+async function fetchFirestorePrices() {
+  if (!db) return {};
+  try {
+    const snapshot = await db.collection('playerPrices').get();
+    const out = {};
+    snapshot.forEach(doc => { out[doc.id] = doc.data(); }); // { sum: float, count: int }
+    return out;
+  } catch (e) {
+    console.warn('Firestore read failed — local-only this draft.', e);
+    return {};
+  }
+}
+
+async function submitToFirestore(records, budget) {
+  if (!db || !records.length) return;
+  try {
+    const batch = db.batch();
+    for (const r of records) {
+      const normalizedPrice = r.finalPrice / budget;  // store as fraction of budget
+      const ref = db.collection('playerPrices').doc(r.name);
+      batch.set(ref, {
+        sum:   firebase.firestore.FieldValue.increment(normalizedPrice),
+        count: firebase.firestore.FieldValue.increment(1)
+      }, { merge: true });
+    }
+    await batch.commit();
+  } catch (e) {
+    console.warn('Firestore write failed — prices saved locally only.', e);
+  }
+}
 </script>
 </body>
 </html>

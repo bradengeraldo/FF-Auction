@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // playerPrices/{playerName}
+    // Stores community-contributed auction price observations.
+    // Structure: { sum: float, count: int }
+    //   sum   — running total of normalized prices (finalPrice / BUDGET), so 0–1 per observation
+    //   count — number of observations
+    match /playerPrices/{player} {
+      // Anyone can read — needed at draft start to load shared values
+      allow read: if true;
+
+      // Create: first-ever observation for this player
+      allow create: if request.resource.data.keys().hasOnly(['sum', 'count'])
+                    && request.resource.data.count == 1
+                    && request.resource.data.sum >= 0
+                    && request.resource.data.sum <= 1;
+
+      // Update: each write adds exactly one observation (count +1, sum increases by 0–1)
+      allow update: if request.resource.data.keys().hasOnly(['sum', 'count'])
+                    && (request.resource.data.count - resource.data.count) == 1
+                    && (request.resource.data.sum   - resource.data.sum)   >= 0
+                    && (request.resource.data.sum   - resource.data.sum)   <= 1;
+    }
+
+    // Deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
