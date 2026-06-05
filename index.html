@@ -377,12 +377,50 @@
     <ul style="margin: 4px 0; padding-left: 22px; color: var(--text)">
       <li><strong>Stars-and-scrubs</strong> &mdash; spend most of your budget on 2&ndash;3 elite players and fill the rest of your roster cheaply.</li>
       <li><strong>Balanced build</strong> &mdash; spread $15&ndash;$30 across most of your starters and avoid any single dominant player.</li>
-      <li><strong>Price enforcer</strong> &mdash; bid up players you don't want to drain opponents' budgets, but be careful not to get stuck owning them.</li>
       <li><strong>Late-round savings</strong> &mdash; figure out the minimum you can spend on QB, K, and DST so you have more to work with on RB and WR.</li>
     </ul>
 
     <h4 style="margin-top:18px; color: var(--accent); font-size:15px">What this site is not</h4>
-    <p style="margin: 4px 0">This is a free hobby project. It is not affiliated with the NFL, ESPN, Yahoo, or any actual fantasy platform. Player values are baseline estimates and should not be your only source for real draft prep. Use it to get comfortable with bidding pace and budget management, then check current rankings before your real draft.</p>
+    <p style="margin: 4px 0">This is not affiliated with the NFL, ESPN, Yahoo, or any actual fantasy platform. Player values are baseline estimates that learn as more users draft and should not be your only source for real draft prep. Use it to get comfortable with bidding pace and budget management, then check current rankings before your real draft.</p>
+  </div>
+
+  <div class="card about-card">
+    <h3>Auction draft strategy guide</h3>
+    <p>Auction drafts reward planning more than snake drafts do, because you can theoretically own any player &mdash; the only limit is your budget. A few principles go a long way when you practice here.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Know your budget math</h4>
+    <p style="margin: 4px 0">With a $200 budget and 16 roster spots, every team must reserve at least $1 for each open slot. That means the most you can ever bid on a single player is your budget minus the number of remaining spots. Late in the draft, watch how much each opponent has left and how many slots they still need to fill &mdash; a rival with $40 and three empty spots can only push you to about $37 on any one player.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Set a max price before you bid</h4>
+    <p style="margin: 4px 0">Determine what general value each player is worth to you <em>before</em> the bidding starts, but don't be afraid to be flexible as you start to learn how the room is valuing players. Some common auction mistakes are chasing a player significantly past your number because you're caught up in the moment or passing up on a player because you decided their value before learning how the draft was shaking out.  A small <em>overpay</em> might get you a great player, but a large one could drain the budget you needed for the rest of your roster.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Nominate strategically</h4>
+    <p style="margin: 4px 0">When you nominate, you don't have to nominate players you want. A classic move is to throw out an expensive player you have no intention of buying &mdash; especially at a position rivals still need &mdash; to pull money off the table before you go after your own targets. Conversely, nominating cheap players early keeps your own plans hidden.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Find value at the edges</h4>
+    <p style="margin: 4px 0">Most managers overspend on the top tier and run out of money for the middle. The biggest edge usually comes from the $1&ndash;$10 range: knowing which late-round running backs and receivers carry upside lets you build a deep roster while opponents are stuck starting replacement-level players. Practice spending the <em>minimum</em> viable amount on QB, TE, K, and DST so you can load up on RB and WR depth. Patience can be a virtue.</p>
+  </div>
+
+  <div class="card about-card">
+    <h3>Frequently asked questions</h3>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">What is an auction draft?</h4>
+    <p style="margin: 4px 0">Instead of taking turns picking players, every manager starts with the same budget (here, $200) and bids on players one at a time. Players go to the highest bidder, and you keep going until every roster is full. It's the most flexible fantasy format &mdash; any player is available to anyone who can afford them.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">How is this different from a snake draft?</h4>
+    <p style="margin: 4px 0">In a snake draft your picks are fixed by draft slot, so you can only choose from whoever is left when your turn comes around. In an auction, there are no fixed turns &mdash; if you really want the No. 1 overall player, you can have him, as long as you're willing to pay and can still fill the rest of your roster.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Where do the player values come from?</h4>
+    <p style="margin: 4px 0">Each player has a baseline value derived from preseason rankings and projected auction prices. As people use the simulator, the prices that real users actually pay are blended into those baselines over time, so the values gradually reflect how the community drafts.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Is it free?</h4>
+    <p style="margin: 4px 0">Yes. It's a free practice tool. There's nothing to buy and no account required &mdash; just enter a team name and start drafting.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Can I change the number of teams or the budget?</h4>
+    <p style="margin: 4px 0">Right now the simulator runs a standard 12-team league with a $200 budget and 16-man rosters, which covers the most common setup. You can adjust the bid pace and your nomination timer in League Settings above.</p>
+
+    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Will this work for my real draft?</h4>
+    <p style="margin: 4px 0">It's built for practice &mdash; getting comfortable with bidding pace, nomination tactics, and budget management. Treat the values as a starting point, not gospel, and always check current rankings and injury news before your real draft.</p>
   </div>
 
   <footer class="site-footer">
@@ -508,6 +546,14 @@
   </div>
   <div id="results-summary" style="color: var(--muted); margin-bottom: 14px"></div>
   <div class="results-grid" id="results-grid"></div>
+
+  <!-- Ad slot (300x250 medium rectangle) -->
+  <div class="ad-slot" aria-label="Advertisement">
+    <div class="ad-slot-inner" id="ad-slot-results">
+      <span class="ad-slot-label">Advertisement</span>
+      <span class="ad-slot-size">300 &times; 250</span>
+    </div>
+  </div>
 </div>
 
 <div id="toast-container"></div>
@@ -1615,9 +1661,58 @@ async function submitToFirestore(records, budget) {
     }
     await batch.commit();
   } catch (e) {
-    console.warn('Firestore write failed — prices saved locally only.', e);
+    console.warn('Firestore write failed — prices not shared this draft.', e);
   }
 }
+</script>
+
+<!-- ============================================================
+     MEDIA.NET ADS
+     ============================================================
+     ONE-TIME SETUP after Media.net approves your site:
+       1. Paste your Customer ID (cid) into MEDIANET_CID below.
+       2. For each ad unit you create in the Media.net dashboard,
+          paste its ad-unit ID into the matching slot below.
+     Until MEDIANET_CID is filled in, no ad code loads and each
+     slot just shows the neutral "Advertisement" placeholder, so
+     the live site is never broken while you wait for approval.
+     ============================================================ -->
+<script>
+  // ---- Your Media.net details (fill in after approval) ----
+  window.MEDIANET_CID = "";   // e.g. "8CUXXXXXX"
+
+  // Map each on-page slot -> the Media.net ad-unit ID for that slot.
+  // Leave a value blank to keep that slot's placeholder.
+  window.MEDIANET_SLOTS = {
+    "ad-slot-setup":   "",    // setup screen   (300x250)
+    "ad-slot-draft":   "",    // draft screen   (300x250)
+    "ad-slot-results": ""     // results screen (300x250)
+  };
+
+  // ---- Loader (no need to edit below) ----
+  (function () {
+    var cid = (window.MEDIANET_CID || "").trim();
+    if (!cid) return;  // not configured yet — keep placeholders, load nothing
+
+    window._mNHandle = window._mNHandle || {};
+    window._mNHandle.queue = window._mNHandle.queue || [];
+
+    var lib = document.createElement("script");
+    lib.async = true;
+    lib.src = "//contextual.media.net/dmedianet.js?cid=" + encodeURIComponent(cid);
+    document.head.appendChild(lib);
+
+    var slots = window.MEDIANET_SLOTS || {};
+    Object.keys(slots).forEach(function (containerId) {
+      var unitId = (slots[containerId] || "").trim();
+      var container = document.getElementById(containerId);
+      if (!unitId || !container) return;          // no unit ID -> leave placeholder
+      container.innerHTML = '<div id="' + unitId + '"></div>';
+      window._mNHandle.queue.push(function () {
+        try { window._mNDetails.loadTag(unitId, "300x250", unitId); } catch (e) {}
+      });
+    });
+  })();
 </script>
 </body>
 </html>
