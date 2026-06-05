@@ -1637,7 +1637,10 @@ try {
 async function fetchFirestorePrices() {
   if (!db) return {};
   try {
-    const snapshot = await db.collection('playerPrices').get();
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore timeout')), 5000)
+    );
+    const snapshot = await Promise.race([db.collection('playerPrices').get(), timeout]);
     const out = {};
     snapshot.forEach(doc => { out[doc.id] = doc.data(); }); // { sum: float, count: int }
     return out;
