@@ -1114,88 +1114,37 @@ function assignSlot(team, player) {
 }
 
 /* ============================================================
-   END OF DRAFT + PERSISTENCE + LEARNING
+   END OF DRAFT + LEARNING
    ============================================================
-   We accumulate per-player price observations in localStorage and
-   blend them with the original baseValue/stdDev using a simple
+   Per-player price observations are stored in Firestore (shared by
+   all users) and blended with the original baseValue using a simple
    Bayesian update. PRIOR_WEIGHT controls how much the original
    database is trusted vs. observed prices.
    Only prices the USER paid are recorded — AI bids are excluded
    because they can be inflated by nomination order and budget effects.
    ============================================================ */
-const STORAGE_KEY = 'ffaction_bid_history';
 const PRIOR_WEIGHT = 5;     // pseudo-observations for original baseValue
 const STD_FLOOR = 0.5;      // never let stdDev collapse below this
 
-function loadBidHistory() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch (e) { return []; }
-}
-
-function appendBidHistory(records) {
-  try {
-    const prior = loadBidHistory();
-    prior.push({ draftId: Date.now(), records });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prior));
-    return true;
-  } catch (e) {
-    console.warn('localStorage save failed', e);
-    return false;
-  }
-}
-
-/* Build a map: playerName -> [prices] from all prior drafts */
-function aggregateHistory() {
-  const out = {};
-  for (const draft of loadBidHistory()) {
-    for (const r of (draft.records || [])) {
-      if (!r || !r.name || typeof r.finalPrice !== 'number') continue;
-      (out[r.name] = out[r.name] || []).push(r.finalPrice);
-    }
-  }
-  return out;
-}
-
 /* Mutate PLAYERS_DB-derived player records in-place with learned values.
-   Combines two sources:
-     - localHist: raw prices from this browser's localStorage (user-won, same budget)
-     - firestorePrices: normalized sums from all users (stored as price/budget fractions)
-   Firestore prices are denormalized back to dollar values using the current draft budget
-   before being blended, so cross-league data stays comparable. */
+   Source: firestorePrices — raw dollar sums + counts contributed by ALL
+   users. Each player's baseValue is nudged toward the community average
+   price (sum / count) via a Bayesian blend. Firestore stores only
+   sum/count (not individual prices), so stdDev is left unchanged. */
 function applyLearnedValues(players, firestorePrices = {}, budget = BUDGET) {
-  const localHist = aggregateHistory();
   let updated = 0;
   for (const p of players) {
-    // --- local observations (raw dollar prices) ---
-    const localObs = localHist[p.name] || [];
-    const localN   = localObs.length;
-    const localSum = localObs.reduce((s, v) => s + v, 0);
-
-    // --- Firestore observations (denormalize: stored fraction × current budget) ---
     const fsData = firestorePrices[p.name];
-    const fsN    = fsData ? fsData.count : 0;
-    const fsSum  = fsData ? fsData.sum * budget : 0;  // denormalize
+    const n   = fsData ? fsData.count : 0;
+    const sum = fsData ? fsData.sum   : 0;
 
-    const totalN   = localN + fsN;
-    const totalSum = localSum + fsSum;
+    if (n <= 0) continue;
 
-    if (totalN === 0) continue;
-
-    // Posterior mean: Bayesian blend of original base (PRIOR_WEIGHT pseudo-obs) + all observations
-    const newBase = (p.baseValue * PRIOR_WEIGHT + totalSum) / (PRIOR_WEIGHT + totalN);
-
-    // Posterior std: only computable from local raw values (Firestore stores sum/count, not variance)
-    let newStd = p.stdDev;
-    if (localN >= 2) {
-      const localMean = localSum / localN;
-      const variance  = localObs.reduce((s, v) => s + (v - localMean) ** 2, 0) / (localN - 1);
-      const sampleStd = Math.sqrt(variance);
-      newStd = (p.stdDev * PRIOR_WEIGHT + sampleStd * localN) / (PRIOR_WEIGHT + localN);
-    }
+    // Posterior mean: Bayesian blend of original base (PRIOR_WEIGHT pseudo-obs) + observations
+    const newBase = (p.baseValue * PRIOR_WEIGHT + sum) / (PRIOR_WEIGHT + n);
 
     p.baseValue    = Math.max(1, Math.round(newBase * 100) / 100);
-    p.stdDev       = Math.max(STD_FLOOR, Math.round(newStd * 1000) / 1000);
-    p._learnedFromN = totalN;
+    p._learnedFromN = n;
     updated++;
   }
   return updated;
@@ -1204,7 +1153,7 @@ function applyLearnedValues(players, firestorePrices = {}, budget = BUDGET) {
 function endDraft() {
   state.drafting = false;
   state.currentAuction = null;
-  // Auto-save only user-won players to local database (improves future drafts)
+  // Share only user-won players with the community via Firestore.
   // We only learn from prices the user chose to pay — AI bids are noise, not signal.
   const userTeamName = state.userTeamName || 'Your Team';
   const records = state.draftHistory
@@ -1219,13 +1168,12 @@ function endDraft() {
       pick: h.pick,
       timestamp: Date.now()
     }));
-  const ok = records.length > 0 && appendBidHistory(records);
-  // Share prices with all users via Firestore (normalized by budget, fire-and-forget)
+  // Share prices with all users via Firestore (fire-and-forget)
   submitToFirestore(records, BUDGET);
   showScreen('results');
   renderResults();
-  if (ok) toast(`Saved ${records.length} player${records.length !== 1 ? 's' : ''} you drafted — sharing prices with the community.`);
-  else if (records.length === 0) toast('No players drafted by you — nothing saved.');
+  if (records.length > 0) toast(`Sharing ${records.length} player price${records.length !== 1 ? 's' : ''} you drafted with the community.`);
+  else toast('No players drafted by you — nothing to share.');
 }
 
 function buildCsv() {
@@ -1620,12 +1568,12 @@ function updateSpeedToggleLabel() {
 /* ============================================================
    FIRESTORE — shared price learning across all users
    ============================================================
-   playerPrices/{playerName} stores a running sum of normalized
-   prices (finalPrice / BUDGET) and a count of observations.
-   On draft start we fetch the collection and denormalize back to
-   dollar values for the Bayesian blend. Writes are user-won
-   players only, normalized so cross-budget data stays comparable.
-   Graceful fallback to local-only if Firestore is unavailable.
+   playerPrices/{playerName} stores a running sum of raw dollar
+   prices paid and a count of observations (sum/count = avg price).
+   On draft start we fetch the collection and blend the community
+   averages into each player's baseValue. Writes are user-won
+   players only. Graceful fallback to local-only if Firestore is
+   unavailable.
    ============================================================ */
 let db = null;
 try {
@@ -1655,10 +1603,13 @@ async function submitToFirestore(records, budget) {
   try {
     const batch = db.batch();
     for (const r of records) {
-      const normalizedPrice = r.finalPrice / budget;  // store as fraction of budget
+      // Store the raw dollar price paid. sum is a running total of dollars,
+      // count the number of observations, so sum/count = average price paid.
+      const price = Number(r.finalPrice);
+      if (!isFinite(price) || price < 0) continue;
       const ref = db.collection('playerPrices').doc(r.name);
       batch.set(ref, {
-        sum:   firebase.firestore.FieldValue.increment(normalizedPrice),
+        sum:   firebase.firestore.FieldValue.increment(price),
         count: firebase.firestore.FieldValue.increment(1)
       }, { merge: true });
     }

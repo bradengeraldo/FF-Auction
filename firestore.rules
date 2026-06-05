@@ -4,9 +4,11 @@ service cloud.firestore {
 
     // playerPrices/{playerName}
     // Stores community-contributed auction price observations.
-    // Structure: { sum: float, count: int }
-    //   sum   — running total of normalized prices (finalPrice / BUDGET), so 0–1 per observation
-    //   count — number of observations
+    // Structure: { sum: number, count: int }
+    //   sum   — running total of raw dollar prices paid (0–200 per observation)
+    //   count — number of observations  (sum / count = average price paid)
+    // The 200 cap = league budget, so a buggy or malicious client can't
+    // poison the shared values with an absurd single amount.
     match /playerPrices/{player} {
       // Anyone can read — needed at draft start to load shared values
       allow read: if true;
@@ -15,13 +17,13 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasOnly(['sum', 'count'])
                     && request.resource.data.count == 1
                     && request.resource.data.sum >= 0
-                    && request.resource.data.sum <= 1;
+                    && request.resource.data.sum <= 200;
 
-      // Update: each write adds exactly one observation (count +1, sum increases by 0–1)
+      // Update: each write adds exactly one observation (count +1, sum increases by 0–200)
       allow update: if request.resource.data.keys().hasOnly(['sum', 'count'])
                     && (request.resource.data.count - resource.data.count) == 1
                     && (request.resource.data.sum   - resource.data.sum)   >= 0
-                    && (request.resource.data.sum   - resource.data.sum)   <= 1;
+                    && (request.resource.data.sum   - resource.data.sum)   <= 200;
     }
 
     // Deny all other collections
