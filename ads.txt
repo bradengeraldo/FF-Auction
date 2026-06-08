@@ -1,8 +1,1 @@
-# ads.txt — authorized digital sellers
-# Replace the line below with the EXACT line(s) Media.net shows you in your
-# dashboard (Sites > your site > ads.txt). The format is:
-#
-#   media.net, <YOUR_CID>, DIRECT, <MEDIA.NET_TAG_ID>
-#
-# Example (do not use as-is — copy your real values from the dashboard):
-# media.net, 8CUXXXXXX, DIRECT, b9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+google.com, pub-7569385150844962, DIRECT, f08c47fec0942fa0
