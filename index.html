@@ -3,93 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fantasy Football Auction Draft Simulator | Free Mock Tool</title>
-<meta name="description" content="Free fantasy football auction draft simulator. Practice live bidding in a realistic 12-team, $200 mock auction before your real draft. No sign-up needed.">
-<meta name="keywords" content="fantasy football auction draft simulator, mock auction draft, fantasy football auction practice, auction draft tool, fantasy football mock draft, salary cap draft simulator, nomination strategy">
-<meta name="author" content="ff-auction.com">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<link rel="canonical" href="https://ff-auction.com/">
-<meta name="theme-color" content="#0f172a">
-<meta name="application-name" content="FF Auction Sim">
-
-<!-- Open Graph / Facebook / iMessage / Discord / LinkedIn -->
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Fantasy Football Auction Draft Simulator">
-<meta property="og:title" content="Fantasy Football Auction Draft Simulator — Free Practice Tool">
-<meta property="og:description" content="Practice live auction bidding against the computer in a realistic 12-team, $200 mock draft. Master nomination strategy and budget management before draft day.">
-<meta property="og:url" content="https://ff-auction.com/">
-<meta property="og:image" content="https://ff-auction.com/og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Fantasy Football Auction Draft Simulator">
-<meta property="og:locale" content="en_US">
-
-<!-- Twitter / X Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Fantasy Football Auction Draft Simulator — Free Practice Tool">
-<meta name="twitter:description" content="Practice live auction bidding against the computer in a realistic 12-team, $200 mock draft. Get ready for draft day.">
-<meta name="twitter:image" content="https://ff-auction.com/og-image.png">
-<meta name="twitter:image:alt" content="Fantasy Football Auction Draft Simulator">
-
-<!-- Structured data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "name": "Fantasy Football Auction Draft Simulator",
-      "url": "https://ff-auction.com/",
-      "description": "A free browser-based fantasy football auction draft simulator. Practice live bidding against computer-controlled teams in a 12-team, $200-budget, 16-round mock auction.",
-      "applicationCategory": "GameApplication",
-      "operatingSystem": "Any (web browser)",
-      "browserRequirements": "Requires JavaScript",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Braden Geraldo"
-      }
-    },
-    {
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "What is a fantasy football auction draft simulator?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "It is a free practice tool that recreates a fantasy football auction draft. You nominate and bid on real NFL players against computer-controlled teams, each with a salary cap budget, so you can rehearse bidding pace, nomination tactics, and budget management before your real draft."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Is the auction draft simulator free?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. The simulator is completely free to use in your browser with no sign-up or download required."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What league settings does the simulator use?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "It runs a standard 12-team league with a $200 budget and 16-player rosters, the most common auction setup. You control one team and can adjust the bid pace and your nomination timer."
-          }
-        }
-      ]
-    }
-  ]
-}
-</script>
-
-<!-- Google AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7569385150844962"
-     crossorigin="anonymous"></script>
+<title>Fantasy Football Auction Draft Simulator</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -295,32 +209,6 @@
   .team-card .money { font-weight: 700; color: var(--good); }
   .team-card .roster { color: var(--muted); font-size: 11px; line-height: 1.4; }
   .team-card .pos-pill { display: inline-block; background: var(--panel); padding: 1px 6px; border-radius: 3px; margin-right: 4px; font-size: 10px; }
-  .team-card .strategy-tag { display: inline-block; background: var(--accent); color: #0b1020; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-bottom: 4px; letter-spacing: .2px; }
-
-  /* Team roster modal */
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.62);
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-  }
-  .modal-box {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    width: 100%; max-width: 460px; max-height: 86vh; overflow-y: auto;
-    padding: 18px 20px; position: relative;
-  }
-  .modal-close {
-    position: absolute; top: 8px; right: 10px;
-    background: transparent; color: var(--muted); font-size: 22px; line-height: 1; padding: 2px 8px;
-  }
-  .modal-close:hover:not(:disabled) { color: var(--text); background: transparent; }
-  .modal-box h3 { margin: 0 6px 2px 0; display: inline-block; }
-  .modal-sub { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
-  .modal-roster { width: 100%; border-collapse: collapse; margin-top: 6px; }
-  .modal-roster td, .modal-roster th { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; }
-  .modal-roster th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .modal-roster .slot { color: var(--muted); width: 46px; }
-  .modal-roster .price { text-align: right; color: var(--good); white-space: nowrap; }
-  .modal-roster tr.empty td { opacity: 0.45; }
 
   /* Log */
   .log {
@@ -392,6 +280,53 @@
   .about-card p { margin: 8px 0; color: var(--text); }
   .about-card ul li { margin-bottom: 4px; }
 
+  /* Collapsible info sections */
+  .accordion > summary {
+    cursor: pointer; list-style: none; margin: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; font-weight: 700;
+  }
+  .accordion > summary::-webkit-details-marker { display: none; }
+  .accordion > summary::after {
+    content: '+'; color: var(--accent); font-weight: 700; font-size: 20px; line-height: 1;
+    transition: transform 0.15s;
+  }
+  .accordion[open] > summary::after { content: '\2212'; }
+  .card.accordion { padding-top: 14px; padding-bottom: 14px; }
+  .card.accordion > summary { font-size: 18px; }
+  .card.accordion > .accordion-body { margin-top: 10px; }
+  .sub-accordion { border-top: 1px solid var(--border); }
+  .sub-accordion > summary {
+    color: var(--accent); font-size: 15px; font-weight: 600; padding: 11px 0;
+  }
+  .sub-accordion > summary::after { font-size: 17px; }
+  .sub-accordion > *:not(summary) { margin-top: 2px; padding-bottom: 6px; }
+
+  /* Team roster modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.62);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    width: 100%; max-width: 460px; max-height: 86vh; overflow-y: auto;
+    padding: 18px 20px; position: relative;
+  }
+  .modal-close {
+    position: absolute; top: 8px; right: 10px;
+    background: transparent; color: var(--muted); font-size: 22px; line-height: 1; padding: 2px 8px;
+  }
+  .modal-close:hover:not(:disabled) { color: var(--text); background: transparent; }
+  .modal-box h3 { margin: 0 6px 2px 0; display: inline-block; }
+  .modal-sub { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+  .modal-roster { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .modal-roster td, .modal-roster th { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; }
+  .modal-roster th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal-roster .slot { color: var(--muted); width: 46px; }
+  .modal-roster .price { text-align: right; color: var(--good); white-space: nowrap; }
+  .modal-roster tr.empty td { opacity: 0.45; }
+
   /* Footer */
   .site-footer {
     text-align: center;
@@ -454,64 +389,94 @@
   <button id="start-draft-btn" style="font-size:16px; padding: 12px 24px">Start Draft</button>
   <div id="setup-error" style="color: var(--bad); margin-top: 10px"></div>
 
-  <div class="card about-card">
-    <h3>About this simulator</h3>
-    <p>This is a practice tool for <strong>auction-style</strong> fantasy football drafts &mdash; the format where every team starts with the same budget and bids on each player, rather than picking in turn from a list. Auction drafts let you build any roster you can afford, which makes them more strategic but also harder to prepare for, since there's no draft board to memorize.</p>
+  <details class="card about-card accordion">
+    <summary>About this simulator</summary>
+    <div class="accordion-body">
+      <p>This is a practice tool for <strong>auction-style</strong> fantasy football drafts &mdash; the format where every team starts with the same budget and bids on each player, rather than picking in turn from a list. Auction drafts let you build any roster you can afford, which makes them more strategic but also harder to prepare for, since there's no draft board to memorize.</p>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">How to use it</h4>
-    <p style="margin: 4px 0">Enter your team name and tweak the settings above, then click <em>Start Draft</em>. You'll be dropped into a live 12-team auction with a $200 budget and 16 roster spots. When it's your turn to nominate, search for the player you want to throw into the pool and set a starting bid. When the other 11 computer GMs nominate, you decide whether to bid, increase the bid, or let them have the player at the current price.</p>
+      <details class="sub-accordion">
+        <summary>How to use it</summary>
+        <p>Enter your team name and tweak the settings above, then click <em>Start Draft</em>. You'll be dropped into a live 12-team auction with a $200 budget and 16 roster spots. When it's your turn to nominate, search for the player you want to throw into the pool and set a starting bid. When the other 11 computer GMs nominate, you decide whether to bid, increase the bid, or let them have the player at the current price.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Strategy ideas to practice</h4>
-    <ul style="margin: 4px 0; padding-left: 22px; color: var(--text)">
-      <li><strong>Stars-and-scrubs</strong> &mdash; spend most of your budget on 2&ndash;3 elite players and fill the rest of your roster cheaply.</li>
-      <li><strong>Balanced build</strong> &mdash; spread $15&ndash;$30 across most of your starters and avoid any single dominant player.</li>
-	<li><strong>Value shopper</strong> &mdash; wait patiently while other spend their money early to find the best values late in the draft. Be careful to time it right or you'll risk running out of players to spend on!</li>
-    </ul>
-      <li><strong>Late-round savings</strong> &mdash; figure out the minimum you can spend on QB, K, and DST so you have more to work with on RB and WR.</li>
-    </ul>
+      <details class="sub-accordion">
+        <summary>Strategy ideas to practice</summary>
+        <ul style="margin: 4px 0; padding-left: 22px; color: var(--text)">
+          <li><strong>Stars-and-scrubs</strong> &mdash; spend most of your budget on 2&ndash;3 elite players and fill the rest of your roster cheaply.</li>
+          <li><strong>Balanced build</strong> &mdash; spread $15&ndash;$30 across most of your starters and avoid any single dominant player.</li>
+          <li><strong>Value shopper</strong> &mdash; wait patiently while others spend their money early to find the best values late in the draft. Be careful to time it right or you'll risk running out of players to spend on!</li>
+          <li><strong>Late-round savings</strong> &mdash; figure out the minimum you can spend on QB, K, and DST so you have more to work with on RB and WR.</li>
+        </ul>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">What this site is not</h4>
-    <p style="margin: 4px 0">This is not affiliated with the NFL, ESPN, Yahoo, or any actual fantasy platform. Player values are baseline estimates that learn as more users draft and should not be your only source for real draft prep. Use it to get comfortable with bidding pace and budget management, then check current rankings before your real draft.</p>
-  </div>
+      <details class="sub-accordion">
+        <summary>What this site is not</summary>
+        <p>This is not affiliated with the NFL, ESPN, Yahoo, or any actual fantasy platform. Player values are baseline estimates that learn as more users draft and should not be your only source for real draft prep. Use it to get comfortable with bidding pace and budget management, then check current rankings before your real draft.</p>
+      </details>
+    </div>
+  </details>
 
-  <div class="card about-card">
-    <h3>Auction draft strategy guide</h3>
-    <p>Auction drafts reward planning more than snake drafts do, because you can theoretically own any player &mdash; the only limit is your budget. A few principles go a long way when you practice here.</p>
+  <details class="card about-card accordion">
+    <summary>Auction draft strategy guide</summary>
+    <div class="accordion-body">
+      <p>Auction drafts reward planning more than snake drafts do, because you can theoretically own any player &mdash; the only limit is your budget. A few principles go a long way when you practice here.</p>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Know your budget math</h4>
-    <p style="margin: 4px 0">With a $200 budget and 16 roster spots, every team must reserve at least $1 for each open slot. That means the most you can ever bid on a single player is your budget minus the number of remaining spots. Late in the draft, watch how much each opponent has left and how many slots they still need to fill &mdash; a rival with $40 and three empty spots can only push you to about $37 on any one player.</p>
+      <details class="sub-accordion">
+        <summary>Know your budget math</summary>
+        <p>With a $200 budget and 16 roster spots, every team must reserve at least $1 for each open slot. That means the most you can ever bid on a single player is your budget minus the number of remaining spots. Late in the draft, watch how much each opponent has left and how many slots they still need to fill &mdash; a rival with $40 and three empty spots can only push you to about $37 on any one player.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Set a max price before you bid</h4>
-    <p style="margin: 4px 0">Determine what general value each player is worth to you <em>before</em> the bidding starts, but don't be afraid to be flexible as you start to learn how the room is valuing players. Some common auction mistakes are chasing a player significantly past your number because you're caught up in the moment or passing up on a player because you decided their value before learning how the draft was shaking out.  A small <em>overpay</em> might get you a great player, but a large one could drain the budget you needed for the rest of your roster.</p>
+      <details class="sub-accordion">
+        <summary>Assess value before you bid</summary>
+        <p>Determine what general value each player is worth to you <em>before</em> the bidding starts, but don't be afraid to be flexible as you start to learn how the room is valuing players. Some common auction mistakes are chasing a player significantly past your number because you're caught up in the moment or passing up on a player because you decided their value before learning how the draft was shaking out.  A small <em>overpay</em> might get you a great player, but a large one could drain the budget you needed for the rest of your roster.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Nominate strategically</h4>
-    <p style="margin: 4px 0">When you nominate, you don't have to nominate players you want. A classic move is to throw out an expensive player you have no intention of buying &mdash; especially at a position rivals still need &mdash; to pull money off the table before you go after your own targets. Conversely, nominating cheap players early keeps your own plans hidden.</p>
+      <details class="sub-accordion">
+        <summary>Nominate strategically</summary>
+        <p>When you nominate, you don't have to nominate players you want. A classic move is to throw out an expensive player you have no intention of buying &mdash; especially at a position rivals still need &mdash; to pull money off the table before you go after your own targets. Conversely, nominating cheap players early keeps your own plans hidden.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Find value at the edges</h4>
-    <p style="margin: 4px 0">Most managers overspend on the top tier and run out of money for the middle. The biggest edge usually comes from the $1&ndash;$10 range: knowing which late-round running backs and receivers carry upside lets you build a deep roster while opponents are stuck starting replacement-level players. Practice spending the <em>minimum</em> viable amount on QB, TE, K, and DST so you can load up on RB and WR depth. Patience can be a virtue.</p>
-  </div>
+      <details class="sub-accordion">
+        <summary>Find value at the edges</summary>
+        <p>Most managers overspend on the top tier and run out of money for the middle. The biggest edge usually comes from the $1&ndash;$10 range: knowing which late-round running backs and receivers carry upside lets you build a deep roster while opponents are stuck starting replacement-level players. Practice spending the <em>minimum</em> viable amount on QB, TE, K, and DST so you can load up on RB and WR depth. Patience can be a virtue.</p>
+      </details>
+    </div>
+  </details>
 
-  <div class="card about-card">
-    <h3>Frequently asked questions</h3>
+  <details class="card about-card accordion">
+    <summary>Frequently asked questions</summary>
+    <div class="accordion-body">
+      <details class="sub-accordion">
+        <summary>What is an auction draft?</summary>
+        <p>Instead of taking turns picking players, every manager starts with the same budget (here, $200) and bids on players one at a time. Players go to the highest bidder, and you keep going until every roster is full. It's the most flexible fantasy format &mdash; any player is available to anyone who can afford them.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">What is an auction draft?</h4>
-    <p style="margin: 4px 0">Instead of taking turns picking players, every manager starts with the same budget (here, $200) and bids on players one at a time. Players go to the highest bidder, and you keep going until every roster is full. It's the most flexible fantasy format &mdash; any player is available to anyone who can afford them.</p>
+      <details class="sub-accordion">
+        <summary>How is this different from a snake draft?</summary>
+        <p>In a snake draft your picks are fixed by draft slot, so you can only choose from whoever is left when your turn comes around. In an auction, there are no fixed turns &mdash; if you really want the No. 1 overall player, you can have him, as long as you're willing to pay and can still fill the rest of your roster.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">How is this different from a snake draft?</h4>
-    <p style="margin: 4px 0">In a snake draft your picks are fixed by draft slot, so you can only choose from whoever is left when your turn comes around. In an auction, there are no fixed turns &mdash; if you really want the No. 1 overall player, you can have him, as long as you're willing to pay and can still fill the rest of your roster.</p>
+      <details class="sub-accordion">
+        <summary>Where do the player values come from?</summary>
+        <p>Each player has a baseline value derived from preseason rankings and projected auction prices. As people use the simulator, the prices that real users actually pay are blended into those baselines over time, so the values gradually reflect how the community drafts.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Where do the player values come from?</h4>
-    <p style="margin: 4px 0">Each player has a baseline value derived from preseason rankings and projected auction prices. As people use the simulator, the prices that real users actually pay are blended into those baselines over time, so the values gradually reflect how the community drafts.</p>
+      <details class="sub-accordion">
+        <summary>Is it free?</summary>
+        <p>Yes. It's a free practice tool. There's nothing to buy and no account required &mdash; just enter a team name and start drafting.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Is it free?</h4>
-    <p style="margin: 4px 0">Yes. It's a free practice tool. There's nothing to buy and no account required &mdash; just enter a team name and start drafting.</p>
+      <details class="sub-accordion">
+        <summary>Can I change the number of teams or the budget?</summary>
+        <p>Right now the simulator runs a standard 12-team league with a $200 budget and 16-man rosters, which covers the most common setup. You can adjust the bid pace and your nomination timer in League Settings above.</p>
+      </details>
 
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Can I change the number of teams or the budget?</h4>
-    <p style="margin: 4px 0">Right now the simulator runs a standard 12-team league with a $200 budget and 16-man rosters, which covers the most common setup. You can adjust the bid pace and your nomination timer in League Settings above.</p>
-
-    <h4 style="margin-top:18px; color: var(--accent); font-size:15px">Will this work for my real draft?</h4>
-    <p style="margin: 4px 0">It's built for practice &mdash; getting comfortable with bidding pace, nomination tactics, and budget management. Treat the values as a starting point, not gospel, and always check current rankings and injury news before your real draft.</p>
-  </div>
+      <details class="sub-accordion">
+        <summary>Will this work for my real draft?</summary>
+        <p>It's built for practice &mdash; getting comfortable with bidding pace, nomination tactics, and budget management. Treat the values as a starting point, not gospel, and always check current rankings and injury news before your real draft.</p>
+      </details>
+    </div>
+  </details>
 
   <footer class="site-footer">
     <a href="/privacy.html">Privacy</a> &middot;
@@ -842,19 +807,12 @@ function sumDraftableBaseValues() {
 
 /* ============================================================
    CPU DRAFT STRATEGIES
-   Each CPU team is assigned a "profile" at the start of every draft.
-   A profile shapes how much that team values each player (a multiplier
-   applied to its discretionary valuation) and biases its nominations.
-   The point is to make every draft feel different and to spread player
-   prices out so they're far less deterministic run-to-run.
-
-   A profile never blocks an essential roster fill — the must-have path
-   in computeValuationForTeam bypasses these multipliers — so drafts
-   always complete no matter which mix of profiles is in play.
+   Each CPU team is assigned a "profile" at the start of every draft that
+   shapes how much it values each player and biases its nominations, so every
+   draft feels different. Profiles are hidden from the user. A profile never
+   blocks an essential roster fill (the must-have path bypasses it), so drafts
+   always complete.
    ============================================================ */
-
-// Attach a 1-based overall value rank to each player (1 = most valuable).
-// Used by profiles to decide who counts as "elite" vs. filler.
 function attachOverallRanks(players) {
   [...players]
     .sort((a, b) => b.baseValue - a.baseValue)
@@ -870,7 +828,6 @@ const STRATEGIES = {
   starsAndScrubs: {
     key: 'starsAndScrubs',
     label: 'Stars & Scrubs',
-    // Dump most of the budget on 2-3 elite players, then fill cheaply.
     valuationMult(player, team) {
       const stars = team.roster.filter(r => r.price >= 25).length;
       if (stars < 3 && player.overallRank <= 16) return 1.18 + Math.random() * 0.17; // chase studs, modest overpay
@@ -881,9 +838,8 @@ const STRATEGIES = {
   balanced: {
     key: 'balanced',
     label: 'Balanced Build',
-    // Spread money across most starters; refuse to pay up for any one stud.
     valuationMult(player) {
-      if (player.overallRank <= 12) return 0.7;                  // avoid dominant studs
+      if (player.overallRank <= 12) return 0.7;                       // avoid dominant studs
       if (player.overallRank <= 70) return 1.08 + Math.random() * 0.12; // lean into the mid-tier band
       return 0.9;
     }
@@ -891,7 +847,6 @@ const STRATEGIES = {
   valueShopper: {
     key: 'valueShopper',
     label: 'Value Shopper',
-    // Sit on the budget early, pounce on bargains in the back half.
     valuationMult(player, team, ctx) {
       if (ctx.progress < 0.45) return 0.7;   // patient — let others spend
       if (ctx.progress < 0.70) return 1.05;  // start hunting
@@ -901,7 +856,6 @@ const STRATEGIES = {
   positional: {
     key: 'positional',
     label: 'Positional',
-    // Prioritize a specific position approach (variant set per team).
     valuationMult(player, team) {
       const pos = player.pos;
       switch (team.posVariant) {
@@ -932,16 +886,12 @@ const STRATEGIES = {
   random: {
     key: 'random',
     label: 'Wild Card',
-    // No plan at all — valuations swing, but within believable bounds.
     valuationMult() {
       return 0.65 + Math.random() * 0.7;  // 0.65x – 1.35x
     }
   }
 };
 
-// Assign a profile to each CPU team for this draft. Guarantees at least one
-// of every profile when there's room, then fills the rest at random and
-// shuffles, so the mix (and order) changes every draft.
 function assignStrategies(teams) {
   const cpus = teams.filter(t => !t.isUser);
   const keys = Object.keys(STRATEGIES);
@@ -1013,8 +963,6 @@ function computeValuationForTeam(player, team, marketFactor, maxTeamBudget, ctx)
   // Need-based boost for unfilled starter slots. Kept small: a large boost
   // makes every team value top RB/WR hugely in the opening rounds (when all
   // are missing 2 starters), which inflates early studs far above their value.
-  // A gentle nudge keeps prices tracking value while still tilting teams
-  // toward filling needs.
   const missing = startersNeeded(team, player.pos);
   if (missing > 0) v *= 1 + 0.1 * missing;
 
@@ -1271,8 +1219,7 @@ async function runAuction(player, nominatorIdx) {
   renderTeams();
 
   // Live auction loop: fast competitive bidding, then a "going once / going
-  // twice / sold" call that either the user OR a computer can interrupt to
-  // keep the bidding alive.
+  // twice / sold" call that either the user OR a computer can interrupt.
   let safety = 0;
   while (safety < 3000) {
     safety++;
@@ -1314,8 +1261,7 @@ function countActive(active) {
 
 /* ---------- Pacing helpers ----------
    Delays scale with the chosen pace, drop to near-zero when the user holds
-   fast-forward, and collapse once the user has passed (so the rest of the
-   auction resolves quickly without them). sleep() already respects pause. */
+   fast-forward, and collapse once the user has passed. sleep() respects pause. */
 function paceScale() {
   let m = state.paceMult;
   if (state.fastForward) m = Math.min(m, 0.05);
@@ -1413,8 +1359,7 @@ function applyUserBid() {
 /* A mid-auction suspense beat: once the price nears the player's expected
    value, the auctioneer sometimes pauses on "going once / going twice" even
    while bidders remain. The user can snipe during the pause; otherwise the
-   loop resumes and a computer bids into it. This does NOT sell the player —
-   only goingGoingGone() (when nobody will raise) does that. */
+   loop resumes and a computer bids into it. This does NOT sell the player. */
 async function maybeSuspenseBeat() {
   const a = state.currentAuction;
   if (a.userPassed) return;                          // resolving fast, skip drama
