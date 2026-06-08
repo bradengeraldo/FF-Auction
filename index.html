@@ -365,24 +365,14 @@
 
   <div class="card">
     <h3>League Settings</h3>
-    <div class="row">
-      <label>Bid pace</label>
-      <select id="bid-speed">
-        <option value="1">Realistic — bids speed up, then slow as players near their value</option>
-        <option value="0.5">Fast — same flow, quicker</option>
-        <option value="0.06">Instant — resolve auctions immediately</option>
-      </select>
+    <div class="row" style="color: var(--muted); font-size: 13px">
+      <span>12-team league &nbsp;&middot;&nbsp; $200 budget &nbsp;&middot;&nbsp; 16 roster spots</span>
     </div>
-    <div class="row">
-      <label>Nomination timer (user)</label>
-      <select id="nom-timer-len">
-        <option value="30">30 seconds (default)</option>
-        <option value="60">60 seconds</option>
-        <option value="0">No timer</option>
-      </select>
+    <div class="row" style="color: var(--muted); font-size: 13px">
+      <span><strong style="color: var(--text)">Starters (9):</strong> 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX, 1 DST, 1 K</span>
     </div>
-    <div class="row" style="color: var(--muted); font-size: 12px">
-      <span>Starters: 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX, 1 DST, 1 K &nbsp;&middot;&nbsp; Max per pos: 2 QB / 8 RB / 8 WR / 2 TE / 1 DST / 1 K</span>
+    <div class="row" style="color: var(--muted); font-size: 13px">
+      <span><strong style="color: var(--text)">Bench (7):</strong> 7 spots</span>
     </div>
   </div>
 
@@ -1955,8 +1945,8 @@ async function startDraft() {
   const name = $('#user-team-name').value.trim() || 'Your Team';
   state.userTeamName = name;
   state.userEmail = $('#user-email').value.trim();
-  state.paceMult = parseFloat($('#bid-speed').value) || 1;
-  state.nominationTimerSec = parseInt($('#nom-timer-len').value, 10);
+  state.paceMult = 1;            // realistic pacing (use the in-draft Fast-Forward to speed up)
+  state.nominationTimerSec = 30; // default nomination timer
   updateSpeedToggleLabel();
   await initDraft();
   btn.disabled = false;
