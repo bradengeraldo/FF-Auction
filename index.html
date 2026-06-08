@@ -128,6 +128,7 @@
   button:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
   button.secondary { background: var(--panel-2); color: var(--text); }
   button.secondary:hover:not(:disabled) { background: var(--border); }
+  button.secondary.active { background: var(--accent); color: #0b1020; font-weight: 700; }
   button.bid { background: var(--good); color: #052e16; }
   button.bid:hover:not(:disabled) { background: #86efac; }
   button.pass { background: var(--bad); color: #450a0a; }
@@ -230,6 +231,16 @@
   .bid-amount { font-size: 48px; font-weight: 800; color: var(--good); margin: 6px 0; }
   .bid-holder { font-size: 16px; color: var(--text); }
   .bid-timer { font-size: 14px; color: var(--warn); margin-top: 4px; }
+  .auction-call {
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--warn);
+    animation: callPulse 0.7s ease-in-out infinite;
+  }
+  .auction-call.sold { color: var(--good); animation: none; }
+  @keyframes callPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
 
   .bid-actions {
     display: flex;
@@ -271,7 +282,11 @@
     margin-bottom: 8px;
     border-left: 4px solid transparent;
     font-size: 12px;
+    cursor: pointer;
+    transition: background 0.12s;
   }
+  .team-card:hover { background: var(--border); }
+  .team-card .view-hint { float: right; color: var(--muted); font-size: 10px; opacity: 0.7; }
   .team-card.user { border-left-color: var(--user); }
   .team-card.nominating { border-left-color: var(--accent); }
   .team-card.bidding { box-shadow: 0 0 0 2px var(--good); }
@@ -280,6 +295,32 @@
   .team-card .money { font-weight: 700; color: var(--good); }
   .team-card .roster { color: var(--muted); font-size: 11px; line-height: 1.4; }
   .team-card .pos-pill { display: inline-block; background: var(--panel); padding: 1px 6px; border-radius: 3px; margin-right: 4px; font-size: 10px; }
+  .team-card .strategy-tag { display: inline-block; background: var(--accent); color: #0b1020; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-bottom: 4px; letter-spacing: .2px; }
+
+  /* Team roster modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.62);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    width: 100%; max-width: 460px; max-height: 86vh; overflow-y: auto;
+    padding: 18px 20px; position: relative;
+  }
+  .modal-close {
+    position: absolute; top: 8px; right: 10px;
+    background: transparent; color: var(--muted); font-size: 22px; line-height: 1; padding: 2px 8px;
+  }
+  .modal-close:hover:not(:disabled) { color: var(--text); background: transparent; }
+  .modal-box h3 { margin: 0 6px 2px 0; display: inline-block; }
+  .modal-sub { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+  .modal-roster { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .modal-roster td, .modal-roster th { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; }
+  .modal-roster th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal-roster .slot { color: var(--muted); width: 46px; }
+  .modal-roster .price { text-align: right; color: var(--good); white-space: nowrap; }
+  .modal-roster tr.empty td { opacity: 0.45; }
 
   /* Log */
   .log {
@@ -346,37 +387,6 @@
   .pulse { animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity: 0.5 } }
 
-  /* Ad slot */
-  .ad-slot {
-    margin: 24px 0 8px 0;
-    display: flex;
-    justify-content: center;
-  }
-  .ad-slot-inner {
-    width: 300px;
-    height: 250px;
-    background: var(--panel);
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    overflow: hidden;
-  }
-  .ad-slot-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-  .ad-slot-size {
-    font-size: 13px;
-    margin-top: 4px;
-    color: var(--text);
-    opacity: 0.6;
-  }
-
   /* About card */
   .about-card { line-height: 1.55; }
   .about-card p { margin: 8px 0; color: var(--text); }
@@ -423,8 +433,9 @@
     <div class="row">
       <label>Bid pace</label>
       <select id="bid-speed">
-        <option value="2000">Realtime — 2 sec per bid</option>
-        <option value="0">Instant — computer bids resolve immediately</option>
+        <option value="1">Realistic — bids speed up, then slow as players near their value</option>
+        <option value="0.5">Fast — same flow, quicker</option>
+        <option value="0.06">Instant — resolve auctions immediately</option>
       </select>
     </div>
     <div class="row">
@@ -442,15 +453,6 @@
 
   <button id="start-draft-btn" style="font-size:16px; padding: 12px 24px">Start Draft</button>
   <div id="setup-error" style="color: var(--bad); margin-top: 10px"></div>
-
-  <!-- Ad slot (300x250 medium rectangle) -->
-  <div class="ad-slot" aria-label="Advertisement">
-    <div class="ad-slot-inner" id="ad-slot-setup">
-      <span class="ad-slot-label">Advertisement</span>
-      <span class="ad-slot-size">300 &times; 250</span>
-      <!-- Drop your ad tag (e.g., Google AdSense <ins> block) inside this div -->
-    </div>
-  </div>
 
   <div class="card about-card">
     <h3>About this simulator</h3>
@@ -532,7 +534,7 @@
     </div>
     <div>
       <button class="secondary" id="pause-btn">Pause</button>
-      <button class="secondary" id="speed-toggle">Pace: Realtime</button>
+      <button class="secondary" id="speed-toggle">Fast-Forward</button>
       <button class="secondary" id="end-draft-btn">Auto-Finish Draft</button>
     </div>
   </div>
@@ -605,15 +607,6 @@
         <h3>Draft Log</h3>
         <div id="log" class="log"></div>
       </div>
-
-      <!-- Ad slot (300x250 medium rectangle) -->
-      <div class="ad-slot" aria-label="Advertisement">
-        <div class="ad-slot-inner" id="ad-slot-draft">
-          <span class="ad-slot-label">Advertisement</span>
-          <span class="ad-slot-size">300 &times; 250</span>
-          <!-- Drop your ad tag (e.g., Google AdSense <ins> block) inside this div -->
-        </div>
-      </div>
     </div>
   </div>
 
@@ -634,17 +627,16 @@
   </div>
   <div id="results-summary" style="color: var(--muted); margin-bottom: 14px"></div>
   <div class="results-grid" id="results-grid"></div>
-
-  <!-- Ad slot (300x250 medium rectangle) -->
-  <div class="ad-slot" aria-label="Advertisement">
-    <div class="ad-slot-inner" id="ad-slot-results">
-      <span class="ad-slot-label">Advertisement</span>
-      <span class="ad-slot-size">300 &times; 250</span>
-    </div>
-  </div>
 </div>
 
 <div id="toast-container"></div>
+
+<div id="team-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeTeamModal()">
+  <div class="modal-box">
+    <button class="modal-close" aria-label="Close" onclick="closeTeamModal()">&times;</button>
+    <div id="team-modal-content"></div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -683,10 +675,12 @@ const state = {
   pickNumber: 1,                   // 1-based
   draftHistory: [],                // {player, team, price, valuations}
   currentAuction: null,            // active auction or null
-  bidSpeedMs: 2000,                // 2000 (realtime) or 0 (instant)
+  paceMult: 1,                     // base auction pacing (1 realistic, 0.5 fast, 0.06 instant)
+  fastForward: false,              // user-held fast-forward (near-instant)
   nominationTimerSec: 30,
   paused: false,
   drafting: false,
+  openTeamModal: null,             // team index whose roster modal is open, or null
   log: []
 };
 
@@ -762,6 +756,8 @@ async function initDraft() {
   if (updated > 0) {
     logEntry(`Loaded learned values for ${updated} player(s) based on your prior draft prices.`, 'system');
   }
+  // Rank players by value so strategy profiles can tell elites from filler
+  attachOverallRanks(state.players);
 
   // build 12 teams (user is index 0)
   state.teams = [];
@@ -771,6 +767,11 @@ async function initDraft() {
     state.teams.push(buildTeam(cpuNames[i], false));
   }
   state.userTeamIndex = 0;
+
+  // Assign each CPU team a hidden draft profile for this draft.
+  // Profiles are intentionally NOT logged or shown in the UI so the user
+  // has to read each team's behavior rather than being told their plan.
+  assignStrategies(state.teams);
 
   // shuffle nomination order (fixed for entire draft per spec)
   const indices = Array.from({ length: NUM_TEAMS }, (_, i) => i);
@@ -788,7 +789,10 @@ function buildTeam(name, isUser) {
     isUser,
     budget: BUDGET,
     roster: [],                 // {player, price, slot}
-    posCount: { QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 }
+    posCount: { QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 },
+    strategy: null,             // CPU draft profile (assigned in initDraft)
+    posVariant: null,           // sub-variant for the "positional" profile
+    strategyLabel: isUser ? 'You' : ''
   };
 }
 
@@ -821,6 +825,142 @@ function totalBudgetRemaining() {
 function sumRemainingBaseValues() {
   return state.players.reduce((s, p) => p.drafted ? s : s + p.baseValue, 0);
 }
+/* Sum of base values for only the players that will actually be drafted —
+   the top-N undrafted by value, where N = open roster slots league-wide.
+   The market factor (budget ÷ value still to buy) must ignore the hundreds of
+   deep scrubs that never get bought, otherwise it understates every price. */
+function sumDraftableBaseValues() {
+  const slotsLeft = state.teams.reduce((s, t) => s + rosterSlotsLeft(t), 0);
+  if (slotsLeft <= 0) return 1;
+  const vals = state.players
+    .filter(p => !p.drafted)
+    .map(p => p.baseValue)
+    .sort((a, b) => b - a)
+    .slice(0, slotsLeft);
+  return vals.reduce((s, v) => s + v, 0);
+}
+
+/* ============================================================
+   CPU DRAFT STRATEGIES
+   Each CPU team is assigned a "profile" at the start of every draft.
+   A profile shapes how much that team values each player (a multiplier
+   applied to its discretionary valuation) and biases its nominations.
+   The point is to make every draft feel different and to spread player
+   prices out so they're far less deterministic run-to-run.
+
+   A profile never blocks an essential roster fill — the must-have path
+   in computeValuationForTeam bypasses these multipliers — so drafts
+   always complete no matter which mix of profiles is in play.
+   ============================================================ */
+
+// Attach a 1-based overall value rank to each player (1 = most valuable).
+// Used by profiles to decide who counts as "elite" vs. filler.
+function attachOverallRanks(players) {
+  [...players]
+    .sort((a, b) => b.baseValue - a.baseValue)
+    .forEach((p, i) => { p.overallRank = i + 1; });
+}
+
+const POS_VARIANTS = ['zeroRB', 'heroRB', 'topQB', 'topTE', 'topWR'];
+const POS_VARIANT_LABEL = {
+  zeroRB: 'Zero-RB', heroRB: 'Hero-RB', topQB: 'Top-QB', topTE: 'Top-TE', topWR: 'Top-WR'
+};
+
+const STRATEGIES = {
+  starsAndScrubs: {
+    key: 'starsAndScrubs',
+    label: 'Stars & Scrubs',
+    // Dump most of the budget on 2-3 elite players, then fill cheaply.
+    valuationMult(player, team) {
+      const stars = team.roster.filter(r => r.price >= 25).length;
+      if (stars < 3 && player.overallRank <= 16) return 1.18 + Math.random() * 0.17; // chase studs, modest overpay
+      if (stars < 3 && player.overallRank <= 30) return 0.8;                          // mild near-elite interest
+      return 0.55 + Math.random() * 0.1;                                              // everyone else: bargains only
+    }
+  },
+  balanced: {
+    key: 'balanced',
+    label: 'Balanced Build',
+    // Spread money across most starters; refuse to pay up for any one stud.
+    valuationMult(player) {
+      if (player.overallRank <= 12) return 0.7;                  // avoid dominant studs
+      if (player.overallRank <= 70) return 1.08 + Math.random() * 0.12; // lean into the mid-tier band
+      return 0.9;
+    }
+  },
+  valueShopper: {
+    key: 'valueShopper',
+    label: 'Value Shopper',
+    // Sit on the budget early, pounce on bargains in the back half.
+    valuationMult(player, team, ctx) {
+      if (ctx.progress < 0.45) return 0.7;   // patient — let others spend
+      if (ctx.progress < 0.70) return 1.05;  // start hunting
+      return 1.18 + Math.random() * 0.12;    // aggressive late value
+    }
+  },
+  positional: {
+    key: 'positional',
+    label: 'Positional',
+    // Prioritize a specific position approach (variant set per team).
+    valuationMult(player, team) {
+      const pos = player.pos;
+      switch (team.posVariant) {
+        case 'zeroRB':
+          if (pos === 'RB') return player.overallRank > 80 ? 1.0 : 0.55; // dodge early RBs
+          if (pos === 'WR' || pos === 'TE') return 1.18;
+          return 1.0;
+        case 'heroRB':
+          if (pos === 'RB') return team.posCount.RB === 0
+            ? 1.25 + Math.random() * 0.13                                 // one anchor RB
+            : 0.6;                                                        // then no more RB spend
+          if (pos === 'WR') return 1.12;
+          return 1.0;
+        case 'topQB':
+          if (pos === 'QB' && team.posCount.QB === 0) return player.overallRank <= 70 ? 1.3 : 1.0;
+          return 0.97;
+        case 'topTE':
+          if (pos === 'TE' && team.posCount.TE === 0) return player.overallRank <= 70 ? 1.3 : 1.0;
+          return 0.97;
+        case 'topWR':
+          if (pos === 'WR' && team.posCount.WR < 2) return 1.22;
+          return 0.97;
+        default:
+          return 1.0;
+      }
+    }
+  },
+  random: {
+    key: 'random',
+    label: 'Wild Card',
+    // No plan at all — valuations swing, but within believable bounds.
+    valuationMult() {
+      return 0.65 + Math.random() * 0.7;  // 0.65x – 1.35x
+    }
+  }
+};
+
+// Assign a profile to each CPU team for this draft. Guarantees at least one
+// of every profile when there's room, then fills the rest at random and
+// shuffles, so the mix (and order) changes every draft.
+function assignStrategies(teams) {
+  const cpus = teams.filter(t => !t.isUser);
+  const keys = Object.keys(STRATEGIES);
+  const pool = keys.slice(0, cpus.length);                  // seed one of each (capped at #cpus)
+  while (pool.length < cpus.length) {
+    pool.push(keys[Math.floor(Math.random() * keys.length)]);
+  }
+  shuffle(pool);
+  cpus.forEach((t, i) => {
+    const key = pool[i];
+    t.strategy = STRATEGIES[key];
+    if (key === 'positional') {
+      t.posVariant = POS_VARIANTS[Math.floor(Math.random() * POS_VARIANTS.length)];
+      t.strategyLabel = POS_VARIANT_LABEL[t.posVariant];
+    } else {
+      t.strategyLabel = t.strategy.label;
+    }
+  });
+}
 
 /* ============================================================
    VALUATION MODEL
@@ -840,15 +980,43 @@ function startersNeeded(team, pos) {
 // even if they're in must-have mode. Keeps K/DST auctions realistic.
 const POS_VALUE_CEILING = { K: 2, DST: 3 };
 
-function computeValuationForTeam(player, team, marketFactor, maxTeamBudget) {
+function computeValuationForTeam(player, team, marketFactor, maxTeamBudget, ctx) {
   if (!canRosterPos(team, player.pos)) return 0;
   const base = Math.max(0, player.baseValue + randomNormal(0, player.stdDev));
-  const teamFactor = maxTeamBudget > 0 ? team.budget / maxTeamBudget : 0;
+  // Budget standing dampens what a team will pay, but only gently — a team
+  // that has spent some money is still a real bidder. A hard linear scale
+  // (budget ÷ maxBudget) made depleted teams drop out too fast, which let
+  // prices sag once a few teams had spent. Compress it toward 1 so that any
+  // team with money left bids close to value.
+  const budgetFrac = maxTeamBudget > 0 ? team.budget / maxTeamBudget : 0;
+  const teamFactor = 0.6 + 0.4 * budgetFrac;
   let v = base * marketFactor * teamFactor;
 
-  // Need-based boost for unfilled starter slots
+  // Strategy personality (CPU teams only): the team's draft profile bends
+  // how much it's willing to pay for THIS player. Essential roster fills
+  // below still override this via the must-have path, so drafts can't stall.
+  if (!team.isUser && team.strategy) {
+    v *= team.strategy.valuationMult(player, team, ctx || { progress: 0 });
+  }
+
+  // Gentle early-market caution: in the very first picks every team is still
+  // flush and tends to overbid, so shave a little off across the board. This
+  // is applied UNIFORMLY to every player (not just the top tier) so it never
+  // inverts value ordering — the best players still cost the most regardless
+  // of when they're nominated. Fades out by ~20% into the draft.
+  {
+    const progress = (ctx && ctx.progress) || 0;
+    const earlyDamp = 0.9 + 0.1 * Math.min(1, progress / 0.2);
+    v *= earlyDamp;
+  }
+
+  // Need-based boost for unfilled starter slots. Kept small: a large boost
+  // makes every team value top RB/WR hugely in the opening rounds (when all
+  // are missing 2 starters), which inflates early studs far above their value.
+  // A gentle nudge keeps prices tracking value while still tilting teams
+  // toward filling needs.
   const missing = startersNeeded(team, player.pos);
-  if (missing > 0) v *= 1 + 0.3 * missing;
+  if (missing > 0) v *= 1 + 0.1 * missing;
 
   // Must-have: if team's remaining slots can't fit all missing starters without this player,
   // they MUST bid up to whatever they can afford
@@ -869,10 +1037,12 @@ function computeValuationForTeam(player, team, marketFactor, maxTeamBudget) {
 }
 
 function buildValuations(player) {
-  const market = totalBudgetRemaining() / Math.max(1, sumRemainingBaseValues());
+  const market = totalBudgetRemaining() / Math.max(1, sumDraftableBaseValues());
   const eligible = state.teams.filter(t => canRosterPos(t, player.pos));
   const maxTeamBudget = Math.max(0, ...eligible.map(t => t.budget));
-  const valuations = state.teams.map(t => computeValuationForTeam(player, t, market, maxTeamBudget));
+  // Draft progress in [0,1] — used by time-sensitive profiles (e.g. Value Shopper)
+  const ctx = { progress: Math.min(1, (state.pickNumber - 1) / (NUM_TEAMS * ROSTER_SIZE)) };
+  const valuations = state.teams.map(t => computeValuationForTeam(player, t, market, maxTeamBudget, ctx));
   return { valuations, marketFactor: market };
 }
 
@@ -928,7 +1098,65 @@ function advanceNominator() {
         (DST/K only when team has 2 or fewer slots left) ----- */
 const EARLY_ROUND_PICKS = NUM_TEAMS * 5;  // first 5 rounds = 60 picks
 
+// Strategy-flavored nominations add variety draft-to-draft. Returns a player
+// or null to fall back to the default nomination logic. Always returns a
+// player the nominator can actually roster (or null).
+function strategyNominate(team) {
+  const strat = team.strategy;
+  if (!strat) return null;
+  const avail = pos => state.players
+    .filter(p => !p.drafted && p.pos === pos && canRosterPos(team, p.pos))
+    .sort((a, b) => b.baseValue - a.baseValue);
+  const topOverall = (k) => state.players
+    .filter(p => !p.drafted && canRosterPos(team, p.pos))
+    .sort((a, b) => b.baseValue - a.baseValue).slice(0, k);
+  const pickFrom = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+
+  switch (strat.key) {
+    case 'random':
+      // Even a chaotic GM throws out real players early — only once the early
+      // rounds are over does it nominate truly at random. In the opening rounds
+      // it defers to the top-player nomination logic below.
+      if (state.pickNumber <= EARLY_ROUND_PICKS) return null;
+      if (Math.random() < 0.8) {
+        const pool = state.players.filter(p => !p.drafted && canRosterPos(team, p.pos));
+        return pickFrom(pool);
+      }
+      return null;
+    case 'valueShopper':
+      // Early on, throw out an expensive player to drain rivals' budgets
+      if (state.pickNumber <= EARLY_ROUND_PICKS && Math.random() < 0.6) {
+        return pickFrom(topOverall(8));
+      }
+      return null;
+    case 'starsAndScrubs':
+      // While still hunting stars, nominate elites to try to land one
+      if (team.roster.filter(r => r.price >= 25).length < 3 && Math.random() < 0.55) {
+        return pickFrom(topOverall(6));
+      }
+      return null;
+    case 'positional': {
+      const want = { zeroRB: 'WR', heroRB: 'RB', topQB: 'QB', topTE: 'TE', topWR: 'WR' }[team.posVariant];
+      // Nominate the target position early to grab the specialist's guy — but
+      // in the early rounds keep it to genuinely top-tier names so openers
+      // stay focused on the best players.
+      if (want && Math.random() < 0.5) {
+        let pool = avail(want).slice(0, 5);
+        if (state.pickNumber <= EARLY_ROUND_PICKS) pool = pool.filter(p => p.overallRank <= 45);
+        if (pool.length) return pickFrom(pool);
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
 function pickCpuNomination(team) {
+  // Profile-flavored nomination first (may decline and fall through)
+  const flavored = strategyNominate(team);
+  if (flavored) return flavored;
+
   // Early rounds (first 5): random from the top 10 remaining players overall
   // (filtered to positions this team can still roster)
   if (state.pickNumber <= EARLY_ROUND_PICKS) {
@@ -1032,44 +1260,49 @@ async function runAuction(player, nominatorIdx) {
 
   state.currentAuction = {
     player, valuations, active, highBid, highBidder, nominatorIdx,
-    marketFactor, bidderRotationIdx: (state.nominationOrder.indexOf(nominatorIdx) + 1) % NUM_TEAMS,
-    userBidPromise: null
+    marketFactor, userPassed: false, pendingUserBid: false,
+    callStage: null, lastInc: 1
   };
+  // The user can always choose to bid up to their budget, regardless of the
+  // model's private valuation for them.
+  const uIdx = state.userTeamIndex;
+  active[uIdx] = canRosterPos(state.teams[uIdx], player.pos);
   renderAuctionStage();
+  renderTeams();
 
-  // Bidding loop
+  // Live auction loop: fast competitive bidding, then a "going once / going
+  // twice / sold" call that either the user OR a computer can interrupt to
+  // keep the bidding alive.
   let safety = 0;
-  while (countActive(active) > 1 && safety < 400) {
+  while (safety < 3000) {
     safety++;
     await pausedWait();
+    const a = state.currentAuction;
 
-    // Determine next bidder in rotation
-    const teamIdx = nextBidderInRotation();
-    if (teamIdx === null) break;
-    const team = state.teams[teamIdx];
-
-    // If they're the current high bidder and everyone else has passed, end
-    if (teamIdx === state.currentAuction.highBidder) {
-      // Only their own turn; skip
-      state.currentAuction.bidderRotationIdx = (state.currentAuction.bidderRotationIdx + 1) % NUM_TEAMS;
+    // 1) Apply a bid the user queued by clicking "Bid"
+    if (a.pendingUserBid) {
+      a.pendingUserBid = false;
+      applyUserBid();
+      renderAuctionStage(); renderTeams();
       continue;
     }
 
-    if (team.isUser) {
-      await handleUserBidTurn();
-    } else {
-      await sleep(state.bidSpeedMs);
-      await pausedWait();
-      handleCpuBidTurn(teamIdx);
+    // 2) Let a computer raise if any still values the player above the bid
+    if (cpuCompetitiveStep()) {
+      renderAuctionStage(); renderTeams();
+      await auctionDelay(competitiveDelay());
+      // As the price closes in on the player's expected value, drop in a
+      // suspenseful "going once / going twice" beat before the next bid.
+      await maybeSuspenseBeat();
+      continue;
     }
-    renderAuctionStage();
-    renderTeams();
+
+    // 3) Nobody wants to raise — run the auctioneer's call (sold unless interrupted)
+    const interrupted = await goingGoingGone();
+    if (!interrupted) break;
   }
 
-  // Right of last refusal for user if user isn't winner
-  await offerLastRefusal();
-
-  // Award player
+  state.currentAuction.callStage = null;
   awardPlayer();
   state.currentAuction = null;
   renderAll();
@@ -1079,128 +1312,180 @@ function countActive(active) {
   return active.filter(Boolean).length;
 }
 
-function nextBidderInRotation() {
+/* ---------- Pacing helpers ----------
+   Delays scale with the chosen pace, drop to near-zero when the user holds
+   fast-forward, and collapse once the user has passed (so the rest of the
+   auction resolves quickly without them). sleep() already respects pause. */
+function paceScale() {
+  let m = state.paceMult;
+  if (state.fastForward) m = Math.min(m, 0.05);
   const a = state.currentAuction;
+  if (a && a.userPassed) m = Math.min(m, 0.04);
+  return m;
+}
+function auctionDelay(ms) { return sleep(Math.round(ms * paceScale())); }
+function randBetween(lo, hi) { return lo + Math.random() * (hi - lo); }
+
+/* Bids come fast while the price is climbing in big jumps, then slow down as
+   increments shrink toward a player's true number — mirroring a live room. */
+function competitiveDelay() {
+  const a = state.currentAuction;
+  const inc = a.lastInc || 1;
+  let base = inc >= 5 ? 750 : inc >= 3 ? 1150 : inc >= 2 ? 1650 : 2400;
+  // The closer the bid is to the player's expected value, the more the room
+  // hesitates between bids.
+  const ratio = a.player.baseValue > 0 ? a.highBid / a.player.baseValue : 1;
+  if (ratio >= 1.0) base += 1100;
+  else if (ratio >= 0.85) base += 600;
+  else if (ratio >= 0.7) base += 250;
+  return randBetween(base, base + 700);
+}
+
+/* Random bid increment: a fraction of the remaining headroom toward the
+   competition's ceiling, so early raises are big and late raises are small.
+   Once the price approaches the player's expected value, increments are
+   capped down to small nudges. */
+function bidIncrement(headroom, highBid, ev) {
+  if (headroom <= 1) return 1;
+  const frac = 0.18 + Math.random() * 0.22;          // 18%–40% of the headroom
+  let inc = Math.round(headroom * frac) + Math.floor(Math.random() * 2);
+  const ratio = ev > 0 ? highBid / ev : 0;
+  const cap = ratio >= 1.0 ? 1 : ratio >= 0.85 ? 2 : ratio >= 0.7 ? 4 : Infinity;
+  inc = Math.min(inc, cap);
+  return Math.max(1, Math.min(inc, headroom));
+}
+
+/* One competitive computer raise. Returns true if a CPU placed a bid.
+   A CPU is "willing" whenever it still values the player above the current
+   bid and can afford the next dollar — so a team that briefly stopped can
+   jump back in later (e.g. after the user steals the lead). */
+function cpuCompetitiveStep() {
+  const a = state.currentAuction;
+  const pos = a.player.pos;
+  const willing = [];
   for (let i = 0; i < NUM_TEAMS; i++) {
-    const idx = state.nominationOrder[(a.bidderRotationIdx + i) % NUM_TEAMS];
-    if (a.active[idx]) {
-      a.bidderRotationIdx = (a.bidderRotationIdx + i + 1) % NUM_TEAMS;
-      return idx;
-    }
+    if (i === a.highBidder) continue;
+    const t = state.teams[i];
+    if (t.isUser) continue;                          // the user bids via buttons
+    if (!a.active[i]) continue;
+    if (a.valuations[i] > a.highBid && canBid(t, pos, a.highBid + 1)) willing.push(i);
   }
-  return null;
-}
+  if (!willing.length) return false;
 
-/* CPU decision: bid currentBid+1 if their valuation > currentBid AND they can afford */
-function handleCpuBidTurn(teamIdx) {
-  const a = state.currentAuction;
-  const team = state.teams[teamIdx];
-  const myVal = a.valuations[teamIdx];
-  const nextBid = a.highBid + 1;
-  if (nextBid > myVal || !canBid(team, a.player.pos, nextBid)) {
-    a.active[teamIdx] = false;
-    logEntry(`${team.name} passes at ${fmt$(a.highBid)}`, 'pass');
-  } else {
-    a.highBid = nextBid;
-    a.highBidder = teamIdx;
-    logEntry(`${team.name} bids ${fmt$(nextBid)} on ${a.player.name}`, 'bid');
+  // Competition can realistically be pushed to ~the 2nd-highest interested
+  // valuation; the top valuer just needs to clear it.
+  const vals = willing.map(i => a.valuations[i]).sort((x, y) => y - x);
+  const ceiling = vals.length > 1 ? vals[1] : vals[0];
+  const headroom = Math.max(1, ceiling - a.highBid);
+  const inc = bidIncrement(headroom, a.highBid, a.player.baseValue);
+  let newBid = a.highBid + inc;
+
+  let cands = willing.filter(i => a.valuations[i] >= newBid && canBid(state.teams[i], pos, newBid));
+  if (!cands.length) {                               // increment overshot everyone — nudge by $1
+    newBid = a.highBid + 1;
+    cands = willing.filter(i => canBid(state.teams[i], pos, newBid));
+    if (!cands.length) return false;
   }
+  const bidder = cands[Math.floor(Math.random() * cands.length)];
+  a.lastInc = newBid - a.highBid;
+  a.highBid = newBid;
+  a.highBidder = bidder;
+  a.callStage = null;
+  logEntry(`${state.teams[bidder].name} bids ${fmt$(newBid)} on ${a.player.name}`, 'bid');
+  return true;
 }
 
-/* User turn: show bid / pass buttons, wait for click or short timer */
-function handleUserBidTurn() {
-  return new Promise(resolve => {
-    const a = state.currentAuction;
-    const userIdx = state.userTeamIndex;
-    const team = state.teams[userIdx];
-    const nextBid = a.highBid + 1;
-    const canAfford = canBid(team, a.player.pos, nextBid);
-    const banner = $('#nom-banner-timer');
-    let answered = false;
-
-    const finishWith = (action) => {
-      if (answered) return;
-      answered = true;
-      banner.textContent = '';
-      window._userBidHandler = null;
-      if (action === 'bid' && canAfford) {
-        a.highBid = nextBid;
-        a.highBidder = userIdx;
-        logEntry(`YOU bid ${fmt$(nextBid)} on ${a.player.name}`, 'user');
-      } else {
-        a.active[userIdx] = false;
-        logEntry(`You pass at ${fmt$(a.highBid)}`, 'pass');
-      }
-      resolve();
-    };
-
-    window._userBidHandler = finishWith;
-    renderAuctionStage();
-
-    // Auto-pass after bid timer length if user doesn't decide
-    if (state.bidSpeedMs > 0) {
-      let remaining = Math.max(8, Math.floor(state.bidSpeedMs / 1000));
-      const tick = () => {
-        if (answered) return;
-        if (state.paused) { setTimeout(tick, 250); return; }
-        banner.textContent = `Your turn — ${remaining}s`;
-        if (remaining <= 0) finishWith('pass');
-        else { remaining--; setTimeout(tick, 1000); }
-      };
-      tick();
-    } else {
-      // instant mode: brief 1s window so user can click
-      banner.textContent = `Your turn — click bid or pass`;
-      setTimeout(() => finishWith('pass'), 1500);
-    }
-  });
-}
-
-/* Right of last refusal: if user team is eligible, isn't highBidder,
-   and hasn't been bid out, give them a chance */
-async function offerLastRefusal() {
+/* Apply the user's queued +$1 bid (they nudge; computers jump). */
+function applyUserBid() {
   const a = state.currentAuction;
   const userIdx = state.userTeamIndex;
-  const team = state.teams[userIdx];
-  if (!team.isUser) return;                        // skip when auto-finishing
+  const t = state.teams[userIdx];
   if (a.highBidder === userIdx) return;
-  if (!canBid(team, a.player.pos, a.highBid + 1)) return;
-  // If user has already explicitly passed, still offer per spec ("right of last refusal")
-  logEntry(`Right of last refusal — you can bid ${fmt$(a.highBid + 1)} or pass`, 'user');
-
-  return new Promise(resolve => {
-    const banner = $('#nom-banner-timer');
-    let answered = false;
-    const finish = (action) => {
-      if (answered) return;
-      answered = true;
-      banner.textContent = '';
-      window._userBidHandler = null;
-      if (action === 'bid') {
-        a.highBid += 1;
-        a.highBidder = userIdx;
-        logEntry(`YOU exercise right of last refusal at ${fmt$(a.highBid)}!`, 'user');
-        a.active = a.active.map((_, i) => i === userIdx);  // user takes it
-      }
-      resolve();
-    };
-    window._userBidHandler = finish;
-    // Force re-render so bid/pass buttons appear
-    a.active[userIdx] = true;
-    renderAuctionStage();
-
-    const t = state.bidSpeedMs > 0 ? Math.max(8, Math.floor(state.bidSpeedMs / 1000)) : 6;
-    let remaining = t;
-    const tick = () => {
-      if (answered) return;
-      if (state.paused) { setTimeout(tick, 250); return; }
-      banner.textContent = `Last refusal — ${remaining}s`;
-      if (remaining <= 0) finish('pass');
-      else { remaining--; setTimeout(tick, 1000); }
-    };
-    tick();
-  });
+  const newBid = a.highBid + 1;
+  if (!canBid(t, a.player.pos, newBid)) return;
+  a.lastInc = 1;
+  a.highBid = newBid;
+  a.highBidder = userIdx;
+  a.callStage = null;
+  logEntry(`YOU bid ${fmt$(newBid)} on ${a.player.name}`, 'user');
 }
+
+/* A mid-auction suspense beat: once the price nears the player's expected
+   value, the auctioneer sometimes pauses on "going once / going twice" even
+   while bidders remain. The user can snipe during the pause; otherwise the
+   loop resumes and a computer bids into it. This does NOT sell the player —
+   only goingGoingGone() (when nobody will raise) does that. */
+async function maybeSuspenseBeat() {
+  const a = state.currentAuction;
+  if (a.userPassed) return;                          // resolving fast, skip drama
+  const ev = a.player.baseValue;
+  const ratio = ev > 0 ? a.highBid / ev : 0;
+  if (ratio < 0.8) return;                            // only near/over expected value
+  const chance = ratio >= 1.0 ? 0.5 : 0.28;
+  if (Math.random() > chance) return;
+
+  a.callStage = Math.random() < 0.5 ? 'Going once…' : 'Going twice…';
+  renderAuctionStage();
+  for (let s = 0; s < 8; s++) {
+    await pausedWait();
+    if (a.pendingUserBid) {
+      a.pendingUserBid = false;
+      applyUserBid();
+      a.callStage = null;
+      renderAuctionStage(); renderTeams();
+      return;
+    }
+    await auctionDelay(220);
+  }
+  a.callStage = null;
+  renderAuctionStage();
+}
+
+/* Going once… going twice… sold. Resolves unless the user clicks Bid or a
+   computer decides it still wants the player. Returns true if interrupted. */
+async function goingGoingGone() {
+  const a = state.currentAuction;
+  for (const label of ['Going once…', 'Going twice…']) {
+    a.callStage = label;
+    renderAuctionStage();
+    const ticks = 12;
+    for (let s = 0; s < ticks; s++) {
+      await pausedWait();
+      if (a.pendingUserBid) {                        // user interrupts
+        a.pendingUserBid = false;
+        applyUserBid();
+        renderAuctionStage(); renderTeams();
+        return true;
+      }
+      if (cpuCompetitiveStep()) {                    // a computer jumps back in
+        renderAuctionStage(); renderTeams();
+        return true;
+      }
+      await auctionDelay(320);
+    }
+  }
+  a.callStage = 'Sold!';
+  renderAuctionStage();
+  await auctionDelay(900);
+  return false;
+}
+
+/* Button handlers (queue actions for the auction loop to apply) */
+window.userBid = function () {
+  const a = state.currentAuction;
+  if (!a || a.userPassed) return;
+  if (a.highBidder === state.userTeamIndex) return;
+  a.pendingUserBid = true;
+};
+window.userPass = function () {
+  const a = state.currentAuction;
+  if (!a || a.userPassed) return;
+  if (a.highBidder === state.userTeamIndex) return;  // can't pass while leading
+  a.userPassed = true;
+  a.active[state.userTeamIndex] = false;
+  logEntry(`You pass — letting the auction resolve.`, 'pass');
+  renderAuctionStage();
+};
 
 function awardPlayer() {
   const a = state.currentAuction;
@@ -1457,12 +1742,59 @@ function renderTeams() {
     const posPills = POSITIONS.map(p =>
       `<span class="pos-pill">${p} ${t.posCount[p]}/${POS_MAX[p]}</span>`
     ).join('');
-    return `<div class="${cls.join(' ')}">
+    return `<div class="${cls.join(' ')}" onclick="showTeamRoster(${i})" title="View ${escapeHtml(t.name)}'s roster">
       <div class="top"><span class="name">${escapeHtml(t.name)}${t.isUser ? ' (You)' : ''}</span>
         <span class="money">${fmt$(t.budget)}</span></div>
-      <div class="roster">${rosterSlotsLeft(t)} slots · max bid ${fmt$(maxBid(t))}<br>${posPills}</div>
+      <div class="roster"><span class="view-hint">view roster ›</span>${rosterSlotsLeft(t)} slots · max bid ${fmt$(maxBid(t))}<br>${posPills}</div>
     </div>`;
   }).join('');
+  // Keep an open roster modal in sync as the draft progresses
+  if (state.openTeamModal !== null) renderTeamModal();
+}
+
+/* ----- Team roster modal (viewable anytime, including while paused) ----- */
+const MODAL_SLOT_ORDER = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'TE', 'FLEX', 'DST', 'K',
+  'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
+
+window.showTeamRoster = function (i) {
+  state.openTeamModal = i;
+  renderTeamModal();
+  $('#team-modal').style.display = 'flex';
+};
+window.closeTeamModal = function () {
+  state.openTeamModal = null;
+  $('#team-modal').style.display = 'none';
+};
+
+function renderTeamModal() {
+  const i = state.openTeamModal;
+  if (i === null || !state.teams[i]) return;
+  const t = state.teams[i];
+  const spent = t.roster.reduce((s, r) => s + r.price, 0);
+  const posPills = POSITIONS.map(p =>
+    `<span class="pos-pill">${p} ${t.posCount[p]}/${POS_MAX[p]}</span>`
+  ).join(' ');
+  const rows = MODAL_SLOT_ORDER.map(slot => {
+    const r = t.roster.find(x => x.slot === slot);
+    if (r) {
+      return `<tr><td class="slot">${slot}</td>
+        <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank} · ${escapeHtml(r.player.team)}</span></td>
+        <td class="price">$${r.price}</td></tr>`;
+    }
+    return `<tr class="empty"><td class="slot">${slot}</td><td>—</td><td class="price">—</td></tr>`;
+  }).join('');
+  $('#team-modal-content').innerHTML = `
+    <h3>${escapeHtml(t.name)}${t.isUser ? ' (You)' : ''}</h3>
+    <div class="modal-sub">
+      Budget left <strong style="color:var(--good)">${fmt$(t.budget)}</strong> ·
+      Spent <strong>$${spent}</strong> ·
+      ${rosterSlotsLeft(t)} slots open · max bid ${fmt$(maxBid(t))}
+      <div style="margin-top:6px">${posPills}</div>
+    </div>
+    <table class="modal-roster">
+      <thead><tr><th>Slot</th><th>Player</th><th class="price">Price</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 function renderUserRoster() {
@@ -1537,8 +1869,19 @@ function renderAuctionStage() {
   const winner = state.teams[a.highBidder];
   const userIdx = state.userTeamIndex;
   const userTeam = state.teams[userIdx];
-  const myVal = a.valuations[userIdx];
-  const canIBid = canBid(userTeam, a.player.pos, a.highBid + 1) && a.active[userIdx];
+  const isLeader = a.highBidder === userIdx;
+  const canIBid = !a.userPassed && !isLeader && canBid(userTeam, a.player.pos, a.highBid + 1);
+
+  const callClass = a.callStage === 'Sold!' ? 'sold' : '';
+  const call = a.callStage
+    ? `<div class="auction-call ${callClass}">${a.callStage}</div>`
+    : '';
+
+  let statusMsg;
+  if (a.userPassed) statusMsg = 'You passed — auction resolving';
+  else if (isLeader) statusMsg = "You're the high bidder";
+  else if (canIBid) statusMsg = 'You can bid up to ' + fmt$(maxBid(userTeam));
+  else statusMsg = "You can't afford the next bid";
 
   c.innerHTML = `
     <div class="player-card">
@@ -1547,24 +1890,25 @@ function renderAuctionStage() {
         <div class="meta">${a.player.posRank} · ${escapeHtml(a.player.team)}</div>
       </div>
       <div class="stats">
-        Active bidders: <strong>${countActive(a.active)} / ${NUM_TEAMS}</strong>
+        Bidders in: <strong>${countActive(a.active)} / ${NUM_TEAMS}</strong>
       </div>
     </div>
     <div class="bid-display">
       <div style="color:var(--muted); font-size:12px">CURRENT BID</div>
       <div class="bid-amount">${fmt$(a.highBid)}</div>
       <div class="bid-holder">High bidder: <strong>${escapeHtml(winner.name)}</strong></div>
+      ${call}
     </div>
     <div class="bid-actions">
-      <button class="bid" onclick="window._userBidHandler && window._userBidHandler('bid')" ${canIBid ? '' : 'disabled'}>
+      <button class="bid" onclick="window.userBid()" ${canIBid ? '' : 'disabled'}>
         Bid ${fmt$(a.highBid + 1)}
       </button>
-      <button class="pass" onclick="window._userBidHandler && window._userBidHandler('pass')" ${a.active[userIdx] ? '' : 'disabled'}>
+      <button class="pass" onclick="window.userPass()" ${(!a.userPassed && !isLeader) ? '' : 'disabled'}>
         Pass
       </button>
     </div>
     <div style="text-align:center; color: var(--muted); font-size: 12px; margin-top: 10px">
-      ${canIBid ? 'You can bid up to ' + fmt$(maxBid(userTeam)) : (a.active[userIdx] ? 'You can\'t afford the next bid' : 'You\'ve passed')}
+      ${statusMsg}
     </div>
   `;
 }
@@ -1621,6 +1965,9 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#email-results-btn').addEventListener('click', emailResults);
   $('#csv-download-btn').addEventListener('click', downloadCsv);
   $('#new-draft-btn').addEventListener('click', () => location.reload());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.openTeamModal !== null) closeTeamModal();
+  });
 
 });
 
@@ -1631,6 +1978,8 @@ function autoFinishDraft() {
   const userIdx = state.userTeamIndex;
   state.teams[userIdx].isUser = false;
   state.teams[userIdx].name = state.teams[userIdx].name + ' (auto)';
+  state.fastForward = true;
+  updateSpeedToggleLabel();
   logEntry(`You handed control to autopilot — finishing the draft.`, 'system');
 
   // If we're currently waiting on a user nomination, resolve it with a CPU pick
@@ -1640,17 +1989,13 @@ function autoFinishDraft() {
     const player = pickCpuNomination(team) || pickTopAvailable(POSITIONS, 5);
     finishUserNomination(player);
   }
-  // If we're currently waiting on a user bid prompt, resolve it as a CPU bid decision
-  if (window._userBidHandler && state.currentAuction) {
+  // If an auction is live, drop the (now-CPU) ex-user back in so it bids on
+  // valuation like any computer, and let pacing fast-forward to the finish.
+  if (state.currentAuction) {
     const a = state.currentAuction;
-    const team = state.teams[userIdx];
-    const myVal = a.valuations[userIdx];
-    const nextBid = a.highBid + 1;
-    if (nextBid <= myVal && canBid(team, a.player.pos, nextBid)) {
-      window._userBidHandler('bid');
-    } else {
-      window._userBidHandler('pass');
-    }
+    a.userPassed = false;
+    a.pendingUserBid = false;
+    a.active[userIdx] = canRosterPos(state.teams[userIdx], a.player.pos);
   }
   // Hide nomination UI styling
   const np = $('#nominate-panel');
@@ -1665,7 +2010,7 @@ async function startDraft() {
   const name = $('#user-team-name').value.trim() || 'Your Team';
   state.userTeamName = name;
   state.userEmail = $('#user-email').value.trim();
-  state.bidSpeedMs = parseInt($('#bid-speed').value, 10);
+  state.paceMult = parseFloat($('#bid-speed').value) || 1;
   state.nominationTimerSec = parseInt($('#nom-timer-len').value, 10);
   updateSpeedToggleLabel();
   await initDraft();
@@ -1685,11 +2030,14 @@ function togglePause() {
 }
 
 function toggleSpeed() {
-  state.bidSpeedMs = state.bidSpeedMs > 0 ? 0 : 2000;
+  state.fastForward = !state.fastForward;
   updateSpeedToggleLabel();
 }
 function updateSpeedToggleLabel() {
-  $('#speed-toggle').textContent = state.bidSpeedMs > 0 ? `Pace: Realtime (2s)` : `Pace: Instant`;
+  const btn = $('#speed-toggle');
+  if (!btn) return;
+  btn.textContent = state.fastForward ? '⏩ Fast-Forwarding' : 'Fast-Forward';
+  btn.classList.toggle('active', state.fastForward);
 }
 
 </script>
@@ -1754,53 +2102,5 @@ async function submitToFirestore(records, budget) {
 }
 </script>
 
-<!-- ============================================================
-     MEDIA.NET ADS
-     ============================================================
-     ONE-TIME SETUP after Media.net approves your site:
-       1. Paste your Customer ID (cid) into MEDIANET_CID below.
-       2. For each ad unit you create in the Media.net dashboard,
-          paste its ad-unit ID into the matching slot below.
-     Until MEDIANET_CID is filled in, no ad code loads and each
-     slot just shows the neutral "Advertisement" placeholder, so
-     the live site is never broken while you wait for approval.
-     ============================================================ -->
-<script>
-  // ---- Your Media.net details (fill in after approval) ----
-  window.MEDIANET_CID = "";   // e.g. "8CUXXXXXX"
-
-  // Map each on-page slot -> the Media.net ad-unit ID for that slot.
-  // Leave a value blank to keep that slot's placeholder.
-  window.MEDIANET_SLOTS = {
-    "ad-slot-setup":   "",    // setup screen   (300x250)
-    "ad-slot-draft":   "",    // draft screen   (300x250)
-    "ad-slot-results": ""     // results screen (300x250)
-  };
-
-  // ---- Loader (no need to edit below) ----
-  (function () {
-    var cid = (window.MEDIANET_CID || "").trim();
-    if (!cid) return;  // not configured yet — keep placeholders, load nothing
-
-    window._mNHandle = window._mNHandle || {};
-    window._mNHandle.queue = window._mNHandle.queue || [];
-
-    var lib = document.createElement("script");
-    lib.async = true;
-    lib.src = "//contextual.media.net/dmedianet.js?cid=" + encodeURIComponent(cid);
-    document.head.appendChild(lib);
-
-    var slots = window.MEDIANET_SLOTS || {};
-    Object.keys(slots).forEach(function (containerId) {
-      var unitId = (slots[containerId] || "").trim();
-      var container = document.getElementById(containerId);
-      if (!unitId || !container) return;          // no unit ID -> leave placeholder
-      container.innerHTML = '<div id="' + unitId + '"></div>';
-      window._mNHandle.queue.push(function () {
-        try { window._mNDetails.loadTag(unitId, "300x250", unitId); } catch (e) {}
-      });
-    });
-  })();
-</script>
 </body>
 </html>
