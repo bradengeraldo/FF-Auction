@@ -370,10 +370,11 @@
   .site-tab:hover:not(:disabled) { background: none; color: var(--text); }
   .site-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  #tab-trenches { display: none; }
-  #tab-trenches iframe { display: block; width: 100%; height: calc(100vh - 50px); border: 0; }
-  body.tab-trenches .screen { display: none !important; }
+  #tab-trenches, #tab-war { display: none; }
+  #tab-trenches iframe, #tab-war iframe { display: block; width: 100%; height: calc(100vh - 50px); border: 0; }
+  body.tab-trenches .screen, body.tab-war .screen { display: none !important; }
   body.tab-trenches #tab-trenches { display: block; }
+  body.tab-war #tab-war { display: block; }
 </style>
 </head>
 <body>
@@ -384,6 +385,7 @@
     <div class="site-tabs">
       <button class="site-tab active" data-tab="sim" onclick="showTab('sim')">Draft Simulator</button>
       <button class="site-tab" data-tab="trenches" onclick="showTab('trenches')">The Trenches</button>
+      <button class="site-tab" data-tab="war" onclick="showTab('war')">Position WAR</button>
     </div>
   </div>
 </div>
@@ -629,6 +631,11 @@
 <!-- ========== THE TRENCHES (projection hub) ========== -->
 <div id="tab-trenches">
   <iframe id="trenches-frame" title="The Trenches — Positional Projection Hub" data-src="trenches.html"></iframe>
+</div>
+
+<!-- ========== POSITION WAR (research dashboard) ========== -->
+<div id="tab-war">
+  <iframe id="war-frame" title="Position WAR — half-PPR, 2018–2025" data-src="war.html"></iframe>
 </div>
 
 <div id="toast-container"></div>
@@ -2088,11 +2095,13 @@ async function submitToFirestore(records, budget) {
 /* Top-level tab switching between the simulator and The Trenches hub */
 function showTab(name){
   document.body.classList.toggle('tab-trenches', name === 'trenches');
+  document.body.classList.toggle('tab-war', name === 'war');
   document.querySelectorAll('.site-tab').forEach(function(b){
     b.classList.toggle('active', b.dataset.tab === name);
   });
-  if(name === 'trenches'){
-    var f = document.getElementById('trenches-frame');
+  var frameId = name === 'trenches' ? 'trenches-frame' : (name === 'war' ? 'war-frame' : null);
+  if(frameId){
+    var f = document.getElementById(frameId);
     if(f && !f.src && f.dataset.src){ f.src = f.dataset.src; } // lazy-load on first open
     window.scrollTo(0, 0);
   }
