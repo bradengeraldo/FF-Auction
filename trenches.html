@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Trenches — 2026 Positional Projection Hub</title><style>
+  :root{
+    --field:#0f172a; --panel:#1e293b; --panel-2:#0f172a; --line:#334155;
+    --chalk:#f1f5f9; --muted:#94a3b8; --dim:#64748b;
+    --rise:#4ade80; --steady:#22d3ee; --fall:#f87171; --flag:#fbbf24;
+    --gA:#4ade80; --gB:#86efac; --gC:#fbbf24; --gD:#fb923c; --gF:#f87171;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:radial-gradient(1200px 400px at 50% -120px,#1e293b 0%,transparent 70%),var(--field);
+    color:var(--chalk);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.4;min-height:100vh;padding:0 0 80px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+  header{border-bottom:1px solid var(--line);padding:30px 0 0;margin-bottom:18px}
+  .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--flag);font-weight:700;margin-bottom:10px}
+  h1{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:clamp(36px,6.5vw,60px);line-height:.92;letter-spacing:.01em;text-transform:uppercase}
+  h1 .thin{color:var(--muted);font-weight:500}
+  .sub{color:var(--muted);font-size:14px;max-width:700px;margin-top:12px}
+  .sub b{color:var(--chalk);font-weight:600}
+  .tabs{display:flex;gap:2px;margin-top:22px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;font-size:18px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--dim);background:none;border:none;border-bottom:3px solid transparent;padding:10px 18px 12px;cursor:pointer;white-space:nowrap}
+  .tab:hover{color:var(--muted)}
+  .tab.active{color:var(--flag);border-bottom-color:var(--flag)}
+  .tabdesc{font-size:12.5px;color:var(--dim);margin:14px 0 16px;max-width:780px}
+  .tabdesc b{color:var(--muted)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px 24px;margin:0 0 16px;font-size:12px;color:var(--muted)}
+  .legend .grp{display:flex;align-items:center;gap:8px}
+  .legend .lbl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;color:var(--dim)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .seg{width:12px;height:14px;border-radius:2px;background:var(--line)}
+  .seg.on{background:var(--flag)}
+  .meter-demo{display:flex;gap:3px}
+  .controls{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  .search{flex:1 1 200px;display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .search svg{flex:none;stroke:var(--dim)}
+  .search input{background:none;border:none;outline:none;color:var(--chalk);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;width:100%}
+  .search input::placeholder{color:var(--dim)}
+  select{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;color:var(--chalk);font-size:13px;padding:9px 30px 9px 12px;cursor:pointer;outline:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238aa2be' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  select:focus,.search:focus-within{border-color:var(--steady)}
+  .reset{background:none;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;cursor:pointer}
+  .reset:hover{color:var(--chalk);border-color:var(--muted)}
+  .count{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--dim);letter-spacing:.06em;margin-left:auto}
+  .count b{color:var(--flag)}
+  .board{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel-2)}
+  .row{display:grid;align-items:center}
+  .head{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .head .cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:13px 9px;cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .head .cell:hover{color:var(--chalk)}
+  .head .cell.active{color:var(--flag)}
+  .head .cell .arw{font-size:9px}
+  .head .num{justify-content:flex-end}
+  .item{border-bottom:1px solid rgba(51,65,85,.55)}
+  .item:last-child{border-bottom:none}
+  .row.data{cursor:pointer;transition:background .12s}
+  .row.data:hover{background:rgba(34,211,238,.07)}
+  .item.open .row.data{background:rgba(34,211,238,.09)}
+  .cell{padding:12px 9px;font-size:14px;overflow:hidden}
+  .rank{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:20px;color:var(--muted);text-align:center}
+  .row.data:hover .rank,.item.open .rank{color:var(--flag)}
+  .team{display:flex;align-items:center;gap:10px;min-width:0}
+  .chip{width:9px;height:26px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  .chip.sm{width:7px;height:22px}
+  .tname{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;font-size:18px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabbr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--dim);letter-spacing:.12em;margin-top:2px}
+  .pname{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;font-size:17px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .psub{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--dim);letter-spacing:.06em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tmini{display:flex;align-items:center;gap:8px}
+  .tmini .ab{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+  .rolechip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--flag);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);padding:3px 7px;border-radius:6px;display:inline-block}
+  .thead-row{display:flex;align-items:center;gap:11px;padding:13px 14px 11px;background:linear-gradient(90deg,rgba(51,65,85,.5),rgba(51,65,85,.12));border-bottom:1px solid rgba(51,65,85,.55)}
+  .thead-row .trank{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:21px;color:var(--flag);width:30px;text-align:center}
+  .thead-row .tnm{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em;text-transform:uppercase}
+  .thead-row .tdv{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--dim);letter-spacing:.12em}
+  .thead-row .roomlbl{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+  .thead-row .roomlbl b{color:var(--muted)}
+  .meter{display:flex;align-items:center;gap:8px}
+  .meter .segs{display:flex;gap:3px}
+  .meter .seg{width:13px;height:16px}
+  .cgrade{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;font-size:12px;width:20px}
+  .gchip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;font-size:11.5px;padding:2px 7px;border-radius:6px;display:inline-block}
+  .datum{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:500;font-size:13px;color:var(--chalk)}
+  .num .datum{display:block;text-align:right}
+  .cbar{display:flex;gap:3px}
+  .cbar i{width:9px;height:9px;border-radius:2px;background:var(--line);display:block}
+  .cbar i.on{background:var(--steady)}
+  .arch{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);padding:3px 7px;border-radius:6px;display:inline-block;white-space:nowrap}
+  .trend{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px}
+  .grade{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:22px;line-height:1}
+  .projcell{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+  .tarrow{font-size:10px;font-weight:700}
+  .detail{display:none;padding:2px 14px 16px 54px;background:rgba(15,23,42,.5)}
+  .item.open .detail{display:block}
+  .oline{display:flex;flex-wrap:wrap;gap:8px;padding-top:14px}
+  .pos{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 11px;min-width:96px}
+  .pos .p{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;letter-spacing:.12em;color:var(--flag);font-weight:700}
+  .pos .n{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:16px;font-weight:600;margin-top:2px;line-height:1.05}
+  .risk{margin-top:12px;font-size:13px;color:var(--muted);max-width:840px}
+  .risk p{margin-top:7px}
+  .risk .k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-right:8px}
+  .k.risk-k{color:var(--fall)} .k.depth-k{color:var(--flag)} .k.note-k{color:var(--steady)}
+  .empty{padding:48px 20px;text-align:center;color:var(--muted)}
+  .empty b{color:var(--chalk);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:22px;display:block;margin-bottom:6px;font-weight:600}
+  .sources{margin-top:26px;border-top:1px solid var(--line);padding-top:22px}
+  .src-head{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:14px}
+  .src-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:10px}
+  .src{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;text-decoration:none;transition:border-color .15s,transform .15s}
+  .src:hover{border-color:var(--steady);transform:translateY(-2px)}
+  .src-tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--flag);font-weight:700}
+  .src-name{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;font-size:17px;color:var(--chalk);line-height:1.05}
+  .src-desc{font-size:12px;color:var(--muted);line-height:1.45;flex:1}
+  .src-url{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--steady);margin-top:3px}
+  .disclaimer{margin-top:18px;font-size:11.5px;color:var(--dim);line-height:1.6}
+  .disclaimer b{color:var(--muted)}
+  @media (max-width:900px){
+    .head{display:none}
+    .row.data{display:flex!important;flex-wrap:wrap;align-items:center;padding:15px 14px;gap:11px 14px}
+    .row.data .cell{padding:0}
+    .c-rank,.c-role{order:1;flex:0 0 auto}
+    .c-team,.c-player{order:2;flex:1 1 auto;min-width:0}
+    .c-player~.c-team{order:3;flex:0 0 auto}
+    .c-proj{order:4;margin-left:auto}
+    .c-stat{order:5;flex:1 1 27%;min-width:104px;display:flex;flex-direction:column;gap:5px}
+    .c-stat::before{content:attr(data-label);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+    .c-stat:first-of-type{padding-top:9px!important;border-top:1px solid rgba(51,65,85,.5)}
+    .c-wide{flex-basis:100%}
+    .detail{padding:2px 14px 16px}
+    .count{margin-left:0;flex-basis:100%}
+    .search{flex-basis:100%}
+    select{flex:1 1 40%}
+  }
+  .grow{grid-template-columns:40px minmax(150px,1fr) 110px 90px;background:rgba(30,41,59,.85)}
+  .grow .c-proj{justify-self:end}
+  .grow .c-utr{justify-self:end}
+  .pgroup{border-top:1px solid rgba(51,65,85,.45)}
+  .prow{border-top:1px solid rgba(51,65,85,.35);background:rgba(15,23,42,.25)}
+  .prow .cell{padding:9px 9px}
+  .prow .pname{font-size:16px}
+  .role{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--flag);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.28);padding:3px 7px;border-radius:6px;display:inline-block;margin-left:8px}
+  @media (max-width:900px){
+    .grow{display:flex!important}
+    .prow{display:flex!important;flex-wrap:wrap;align-items:center;padding:12px 14px;gap:9px 14px}
+    .prow .cell{padding:0}
+    .c-role{order:1}
+    .prow .c-player{order:2;flex:1 1 auto;border:none!important;padding-top:0!important}
+    .prow .c-proj{order:3;margin-left:auto}
+    .prow .c-stat{order:4}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2026 Season · Projection-Weighted · 1–3 Year Lens</div>
+    <h1>The Trenches <span class="thin">/ Positional Hub</span></h1>
+    <p class="sub">O-lines by unit; QBs and TEs ranked player by player; <b>WRs and RBs organized by team</b> — top three wideouts and top two backs per depth chart, each with individual grades. Tap any row for the scout note.</p>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+  <p class="tabdesc" id="tabdesc"></p>
+  <div class="legend" id="legend"></div>
+  <div class="controls">
+    <label class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Search player or team…" autocomplete="off">
+    </label>
+    <select id="conf"><option value="">All conferences</option><option value="AFC">AFC</option><option value="NFC">NFC</option></select>
+    <select id="div"><option value="">All divisions</option><option>AFC East</option><option>AFC North</option><option>AFC South</option><option>AFC West</option><option>NFC East</option><option>NFC North</option><option>NFC South</option><option>NFC West</option></select>
+    <select id="trend"><option value="">Any trend</option><option value="rise">Rising</option><option value="steady">Steady</option><option value="fall">Declining</option></select>
+    <button class="reset" id="reset">Reset</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="board">
+    <div class="row head" id="head"></div>
+    <div id="rows"></div>
+  </div>
+  <section class="sources">
+    <div class="src-head">Sources &amp; Further Reading</div>
+    <div class="src-grid" id="srcgrid"></div>
+    <p class="disclaimer"><b>How to read it.</b> Every rank is a projection-weighted editorial blend across the next 1–3 seasons, so orders diverge from single-season and pure-fantasy boards. On the WR and RB tabs, teams are ordered by <b>room rank</b>; sorting a column re-orders teams by their best player in that column. Age, coaching, weapons, big-play, and archetype grades are <b>directional estimates</b> built for sorting. Rosters, roles, and depth-chart slots reflect early-July 2026 reporting; camp battles will move pieces. Use the verify links to nail down exact data.</p>
+  </section>
+</div>
+<script>
+const TEAMS={ARI:["Arizona Cardinals","#97233F","NFC","NFC West"],ATL:["Atlanta Falcons","#A71930","NFC","NFC South"],BAL:["Baltimore Ravens","#241773","AFC","AFC North"],BUF:["Buffalo Bills","#00338D","AFC","AFC East"],CAR:["Carolina Panthers","#0085CA","NFC","NFC South"],CHI:["Chicago Bears","#0B162A","NFC","NFC North"],CIN:["Cincinnati Bengals","#FB4F14","AFC","AFC North"],CLE:["Cleveland Browns","#311D00","AFC","AFC North"],DAL:["Dallas Cowboys","#041E42","NFC","NFC East"],DEN:["Denver Broncos","#FB4F14","AFC","AFC West"],DET:["Detroit Lions","#0076B6","NFC","NFC North"],GB:["Green Bay Packers","#203731","NFC","NFC North"],HOU:["Houston Texans","#03202F","AFC","AFC South"],IND:["Indianapolis Colts","#002C5F","AFC","AFC South"],JAX:["Jacksonville Jaguars","#006778","AFC","AFC South"],KC:["Kansas City Chiefs","#E31837","AFC","AFC West"],LAC:["Los Angeles Chargers","#0080C6","AFC","AFC West"],LAR:["Los Angeles Rams","#003594","NFC","NFC West"],LV:["Las Vegas Raiders","#000000","AFC","AFC West"],MIA:["Miami Dolphins","#008E97","AFC","AFC East"],MIN:["Minnesota Vikings","#4F2683","NFC","NFC North"],NE:["New England Patriots","#002244","AFC","AFC East"],NO:["New Orleans Saints","#D3BC8D","NFC","NFC South"],NYG:["New York Giants","#0B2265","NFC","NFC East"],NYJ:["New York Jets","#125740","AFC","AFC East"],PHI:["Philadelphia Eagles","#004C54","NFC","NFC East"],PIT:["Pittsburgh Steelers","#FFB612","AFC","AFC North"],SEA:["Seattle Seahawks","#002244","NFC","NFC West"],SF:["San Francisco 49ers","#AA0000","NFC","NFC West"],TB:["Tampa Bay Buccaneers","#D50A0A","NFC","NFC South"],TEN:["Tennessee Titans","#4B92DB","AFC","AFC South"],WAS:["Washington Commanders","#5A1414","NFC","NFC East"]};
+
+const OL=[
+{a:"DEN",r:1,ret:5,cont:"A",dep:"B",age:29.4,con:3,tr:"steady",pj:"A",ol:["Garett Bolles","Ben Powers","Luke Wattenberg","Quinn Meinerz","Mike McGlinchey"],rk:"Elite now and all five return, but Bolles (33) and McGlinchey/Powers (30–31) mean mild age creep by 2028.",dn:"Palczewski and Throckmorton give competent swing help.",nt:"Only unanimous #1 unit in the Sharp panel."},
+{a:"PHI",r:2,ret:5,cont:"A",dep:"A-",age:28.4,con:3,tr:"steady",pj:"A",ol:["Jordan Mailata","Landon Dickerson","Cam Jurgens","Tyler Steen","Lane Johnson"],rk:"Best age curve of the top tier; the one cliff is Lane Johnson (36) walking away. Stoutland's exit is a wildcard.",dn:"Perennially deep — Fred Johnson swings tackle with drafted interior insurance.",nt:"Top multi-year line: young signed core, elite talent."},
+{a:"LAR",r:3,ret:4,cont:"B+",dep:"B-",age:27.2,con:3,tr:"steady",pj:"A-",ol:["Alaric Jackson","Steve Avila","Coleman Shelton","Kevin Dotson","Warren McClendon Jr."],rk:"Best-performing unit of 2025 (1st in adjusted line yards); only Havenstein retired. McClendon steps in at RT.",dn:"Thin at tackle now that McClendon starts.",nt:"Cohesive, mid-priced, steady through 2027."},
+{a:"IND",r:4,ret:4,cont:"B+",dep:"C+",age:26.0,con:3,tr:"rise",pj:"A-",ol:["Bernhard Raimann","Quenton Nelson","Tanor Bortolini","Matt Goncalves","Jalen Travis"],rk:"Young ascending core around Nelson; four starters logged 900+ snaps. Raimann must cut pressures.",dn:"Unproven reserves — one injury exposes the second wave.",nt:"Best cost-controlled multi-year outlook."},
+{a:"BUF",r:5,ret:4,cont:"B+",dep:"B-",age:27.4,con:3,tr:"steady",pj:"B+",ol:["Dion Dawkins","Alec Anderson","Connor McGovern","O'Cyrus Torrence","Spencer Brown"],rk:"Three years of core continuity; cap crunch cost a guard. Dawkins (31) is the age watch.",dn:"Van Demark and Green are spot-starters, not difference-makers.",nt:"4th in pressure rate, 2nd in adjusted line yards."},
+{a:"TB",r:6,ret:5,cont:"A",dep:"C+",age:26.4,con:4,tr:"rise",pj:"B+",ol:["Tristan Wirfs","Ben Bredeson","Graham Barton","Cody Mauch","Luke Goedeke"],rk:"Young, signed-long core; 2025 wrecked by injuries — only Barton topped 800 snaps.",dn:"Barton's flex helps, but 2025 showed the depth can be overrun.",nt:"Highest ceiling of the group when healthy."},
+{a:"PIT",r:7,ret:3,cont:"B-",dep:"C",age:24.2,con:4,tr:"rise",pj:"B+",ol:["Troy Fautanu","Spencer Anderson","Zach Frazier","Mason McCormick","Max Iheanachor"],rk:"Youngest ascending core; LT settling (Fautanu kicks left) is the short-term question.",dn:"Anderson is versatile; beyond him it's raw picks.",nt:"Best 3-year trajectory on the board."},
+{a:"SF",r:8,ret:5,cont:"A",dep:"C+",age:29.6,con:2,tr:"fall",pj:"B",ol:["Trent Williams","Connor Colby","Jake Brendel","Dominick Puni","Colton McKivitz"],rk:"Puni is a rising star, but Trent Williams turns 37 — the biggest single-player cliff on this list.",dn:"Reserve tackles are replacement-level; critical given Williams' age.",nt:"3rd-lowest pressure rate in 2025."},
+{a:"CHI",r:9,ret:3,cont:"B-",dep:"C",age:26.6,con:3,tr:"steady",pj:"B",ol:["Braxton Jones","Joe Thuney","Logan Jones","Jonah Jackson","Darnell Wright"],rk:"Stellar 2025 but lost Dalman (retired) and rookie LT Trapilo (patellar). Thuney is 33.",dn:"Wills added as veteran tackle cover; Bradbury competes at C.",nt:"1st in time to throw in Ben Johnson's first year."},
+{a:"ATL",r:10,ret:4,cont:"B+",dep:"C",age:29.0,con:3,tr:"steady",pj:"B",ol:["Jake Matthews","Matthew Bergeron","Ryan Neuzil","Chris Lindstrom","Jawaan Taylor"],rk:"Talented group that struggled in 2025; Bill Callahan should help. Matthews (34) is the clock.",dn:"Norton and Hinton are journeyman insurance.",nt:"Bounce-back candidate in a better scheme."},
+{a:"DET",r:11,ret:2,cont:"C",dep:"C+",age:24.4,con:4,tr:"rise",pj:"B",ol:["Penei Sewell","Christian Mahogany","Cade Mays","Tate Ratledge","Blake Miller"],rk:"Sewell anchors, but Decker's gone, Sewell moved to LT, and a rookie starts at RT.",dn:"Awosika and Muti give real interior cover.",nt:"High variance — talent + youth, low continuity."},
+{a:"NYG",r:12,ret:4,cont:"B+",dep:"C",age:26.8,con:3,tr:"steady",pj:"B-",ol:["Andrew Thomas","Jon Runyan","John Michael Schmitz Jr.","Francis Mauigoa","Jermaine Eluemunor"],rk:"Everything hinges on Andrew Thomas's availability; Mauigoa added at RG in Round 1.",dn:"Rookie Mbow adds flex, but a Thomas injury guts it.",nt:"Thomas allowed one sack on 448 dropbacks."},
+{a:"CAR",r:13,ret:2,cont:"C",dep:"C-",age:27.8,con:4,tr:"rise",pj:"B-",ol:["Monroe Freeling","Damien Lewis","Luke Fortner","Robert Hunt","Taylor Moton"],rk:"Paid, youngish core, but Ekwonu tore his patellar and may miss all of 2026.",dn:"Already stressed — Nijman and Mays pressed into big roles.",nt:"Only two returners logged 215+ snaps in 2025."},
+{a:"NO",r:14,ret:4,cont:"B+",dep:"C+",age:25.4,con:4,tr:"rise",pj:"B-",ol:["Kelvin Banks Jr.","David Edwards","Erik McCoy","Cesar Ruiz","Taliese Fuaga"],rk:"Two young first-round tackles with real upside; hinges on McCoy's health and Banks's pass pro.",dn:"Landon Young is a solid swing tackle.",nt:"Top-10 ceiling if the tackles take a step."},
+{a:"LAC",r:15,ret:2,cont:"C",dep:"B-",age:25.8,con:4,tr:"rise",pj:"C+",ol:["Rashawn Slater","Jake Slaughter","Tyler Biadasz","Cole Strange","Joe Alt"],rk:"2025 was a disaster (60 sacks). Alt is a stud; Slater's patellar return is the swing factor.",dn:"Salyer is a legit five-position swing.",nt:"Could jump to top-10 if it gels."},
+{a:"KC",r:16,ret:4,cont:"B+",dep:"B-",age:25.6,con:4,tr:"steady",pj:"C+",ol:["Josh Simmons","Kingsley Suamataia","Creed Humphrey","Trey Smith","Jaylon Moore"],rk:"Humphrey anchors a young group, but Simmons must stay healthy at LT.",dn:"Morris and Suamataia give real tackle cover.",nt:"Projected to pass-protect well for Mahomes."},
+{a:"NYJ",r:17,ret:4,cont:"B+",dep:"C",age:25.2,con:4,tr:"rise",pj:"C+",ol:["Olu Fashanu","Dylan Parham","Josh Myers","Joe Tippmann","Armand Membou"],rk:"Highly drafted young line — all five played 1,000+ snaps — but needs consistency.",dn:"Sixth and seventh men are unproven.",nt:"1st in yards before contact, 28th in adjusted line yards."},
+{a:"SEA",r:18,ret:5,cont:"A",dep:"C+",age:25.2,con:3,tr:"steady",pj:"C+",ol:["Charles Cross","Grey Zabel","Jalen Sundell","Anthony Bradford","Abraham Lucas"],rk:"Returns all five from a Super Bowl unit, but scheme may have flattered the talent.",dn:"Fant gives veteran insurance; Jerrell swings.",nt:"Zabel development is the key."},
+{a:"DAL",r:19,ret:5,cont:"A",dep:"B-",age:25.2,con:4,tr:"steady",pj:"C+",ol:["Tyler Guyton","Tyler Smith","Cooper Beebe","Tyler Booker","Terence Steele"],rk:"Heavily invested and young but inconsistent — great run blocking, middling pass pro.",dn:"Hoffman, Richards, and Jones make a deep two-deep.",nt:"4th in adjusted line yards; 20th in pressure rate."},
+{a:"NE",r:20,ret:4,cont:"B+",dep:"C+",age:27.0,con:3,tr:"rise",pj:"C+",ol:["Will Campbell","Alijah Vera-Tucker","Jared Wilson","Mike Onwenu","Morgan Moses"],rk:"Wheels came off in the playoffs; Lomu in Round 1 may be a vote of no-confidence at LT. Moses is 35.",dn:"Lowe and Robinson are playable.",nt:"Top-10 is in range, but a lot must go right."},
+{a:"MIN",r:21,ret:4,cont:"B+",dep:"C",age:27.6,con:3,tr:"steady",pj:"C",ol:["Christian Darrisaw","Donovan Jackson","Blake Brandel","Will Fries","Brian O'Neill"],rk:"Loads of talent, zero reliability — only Fries topped 800 snaps; Darrisaw's health is perennial.",dn:"When starters miss time, the drop-off is severe.",nt:"Healthy version pushes top-12."},
+{a:"ARI",r:22,ret:2,cont:"C",dep:"C-",age:27.8,con:2,tr:"steady",pj:"C",ol:["Paris Johnson Jr.","Isaac Seumalo","Hjalte Froholdt","Chase Bisontis","Elijah Wilkinson"],rk:"Bottom-10 unit rebuilt around Johnson; Seumalo (32) and Wilkinson (31) add age.",dn:"Beachum is aging insurance; thin group.",nt:"Johnson playing 17 games is the swing."},
+{a:"LV",r:23,ret:4,cont:"B+",dep:"C+",age:25.8,con:3,tr:"rise",pj:"C",ol:["Kolton Miller","Spencer Burford","Tyler Linderbaum","Jackson Powers-Johnson","DJ Glaze"],rk:"Colossal 2025, but Kubiak's zone scheme + record-deal Linderbaum at C could flip it fast.",dn:"Munford and Peat give experienced cover.",nt:"Right LG/RT combo out of camp decides the ceiling."},
+{a:"WAS",r:24,ret:4,cont:"B+",dep:"C",age:27.2,con:3,tr:"steady",pj:"C",ol:["Laremy Tunsil","Chris Paul","Nick Allegretti","Sam Cosmi","Josh Conerly Jr."],rk:"Tunsil anchors, but cutting Biadasz left a real center question.",dn:"Trent Scott swings; interior depth is light.",nt:"Not yet the talent for a stable top-15."},
+{a:"BAL",r:25,ret:3,cont:"B-",dep:"C+",age:26.4,con:3,tr:"steady",pj:"C",ol:["Ronnie Stanley","Olaivavega Ioane","Corey Bullock","John Simpson","Roger Rosengarten"],rk:"Elite run-blockers who upgraded guard, but losing Linderbaum left a hole at center.",dn:"Rookie tackles plus Vorhees give cheap cover.",nt:"Climbs if they solve center by Week 1."},
+{a:"CIN",r:26,ret:4,cont:"B+",dep:"C",age:28.0,con:2,tr:"steady",pj:"C-",ol:["Orlando Brown Jr.","Dylan Fairchild","Ted Karras","Dalton Risner","Amarius Mims"],rk:"Tackle pass pro must improve given Burrow's health — Brown gave up 9 sacks.",dn:"Cody Ford is the swing piece; little behind him.",nt:"Mims' Year-3 leap is the swing."},
+{a:"GB",r:27,ret:3,cont:"B-",dep:"C-",age:25.8,con:3,tr:"fall",pj:"C-",ol:["Jordan Morgan","Aaron Banks","Sean Rhyan","Anthony Belton","Zach Tom"],rk:"Let LT and C walk; Tom is coming off a partial patellar tear. Needs luck.",dn:"Churn left it shallow.",nt:"Top-20 if Tom stays healthy."},
+{a:"MIA",r:28,ret:4,cont:"B+",dep:"C-",age:25.0,con:4,tr:"rise",pj:"C-",ol:["Patrick Paul","Kadyn Proctor","Aaron Brewer","Jonah Savaiinaea","Austin Jackson"],rk:"Brewer (All-Pro) and Paul are bright spots; Savaiinaea was among the worst rookies.",dn:"Eichenberg is versatile but shaky.",nt:"Top-15 ceiling, bottom-10 floor."},
+{a:"JAX",r:29,ret:5,cont:"A",dep:"B-",age:26.8,con:3,tr:"steady",pj:"C-",ol:["Cole Van Lanen","Ezra Cleveland","Robert Hainsey","Patrick Mekari","Anton Harrison"],rk:"Deep continuity but solid-not-special players; scheme carries the talent.",dn:"Nine returners make the two-deep a strength.",nt:"Rookie Pregnon could push Mekari at RT."},
+{a:"HOU",r:30,ret:2,cont:"C",dep:"C",age:26.8,con:3,tr:"rise",pj:"D+",ol:["Aireontae Ersery","Wyatt Teller","Keylan Rutledge","Ed Ingram","Braden Smith"],rk:"Re-tooled again; hinges on rookie Rutledge acclimating to center fast.",dn:"Fisher is a former pick still finding footing.",nt:"6th-lowest pressure rate, 2nd-fewest yards before contact."},
+{a:"CLE",r:31,ret:1,cont:"D",dep:"D+",age:27.4,con:3,tr:"rise",pj:"D+",ol:["Spencer Fano","Zion Johnson","Elgton Jenkins","Teven Jenkins","Tytus Howard"],rk:"Five players who've never played together; rookie Fano at LT Day 1 is the wildcard.",dn:"Weakest on the board.",nt:"Intriguing talent, brutal continuity."},
+{a:"TEN",r:32,ret:3,cont:"B-",dep:"C-",age:26.8,con:3,tr:"fall",pj:"D",ol:["Dan Moore Jr.","Peter Skoronski","Austin Schlottmann","Cordell Volson","JC Latham"],rk:"Skoronski is a top-10 LG, but the rest is a mess and Moore's deal looks bad.",dn:"Ojukwu swings; interior backups are bottom-of-roster.",nt:"Needs two career years to reach top-25."}];
+
+const QBP=[
+["BUF","Josh Allen",30,"A+","A-","B-","steady","A+","MVP-caliber annually; all-time QB rushing-TD leader, prime spans the whole window."],
+["NE","Drake Maye",23,"A","B+","B+","rise","A+","MVP runner-up at 23 off an AFC title run; A.J. Brown arrives as his first true alpha."],
+["BAL","Lamar Jackson",29,"A+","B","B-","steady","A","Two-time MVP learning a new Declan Doyle scheme; the floor is playoff-caliber."],
+["CIN","Joe Burrow",29,"A+","B","A","steady","A","Best pure passer alive when upright — the toe injury made health the whole question."],
+["WAS","Jayden Daniels",25,"A","B+","C+","rise","A","Dual-threat profile ages beautifully; needs McLaurin healthy and a WR2 to emerge."],
+["KC","Patrick Mahomes",30,"A+","A","B","steady","A-","Torn ACL/LCL recovery reportedly ahead of schedule; Bieniemy's return rebuilds the glory-years setup."],
+["CHI","Caleb Williams",24,"A-","A","B+","rise","A-","Ben Johnson's scheme masked bottom-of-league accuracy metrics — the Year-3 leap decides the tier."],
+["LAR","Matthew Stafford",38,"A","A","A-","fall","B+","Reigning MVP at 38; elite now, but the 1–3 year lens can't ignore the cliff. Simpson waits."],
+["SEA","Sam Darnold",29,"B+","A-","A-","steady","B+","Back-to-back 4,000-yard years and a Lombardi; how much is Seattle's scheme?"],
+["HOU","C.J. Stroud",24,"A-","B","B+","rise","B+","The four-INT playoff exit obscured real strides; age 24 with a loaded roster."],
+["PHI","Jalen Hurts",27,"B+","B+","B","steady","B+","20th in QBR and lost A.J. Brown, but the SB MVP floor and rushing value are proven."],
+["LAC","Justin Herbert",28,"A","B+","B-","steady","B+","Survived 60 sacks; still hasn't won a playoff game. A healthy line unlocks the best version."],
+["GB","Jordan Love",27,"A-","A-","B-","steady","B+","Three straight plateau years — the contract demands the leap finally arrive."],
+["NYG","Jaxson Dart",23,"B+","B","B","rise","B+","Offense played at champion level with him on the field as a rookie — without Nabers."],
+["DEN","Bo Nix",26,"B+","A","B","steady","B","Broken ankle ended 2025; Payton plus an elite line makes his floor very high."],
+["DAL","Dak Prescott",32,"A-","B","A-","fall","B","Quietly strong 2025, but 33 in July with no succession plan behind him."],
+["TB","Baker Mayfield",31,"B+","B+","B","steady","B","Streaky and physical; the post-Evans offense hands the keys to Egbuka."],
+["JAX","Trevor Lawrence",26,"B+","A-","B","steady","B","Coen's play-calling lifted everything — Lawrence must prove it's him, not the scheme."],
+["SF","Brock Purdy",26,"B+","A","B+","steady","B","7-2 when healthy in 2025, but durability is now a pattern; Evans arrives."],
+["DET","Jared Goff",31,"B+","B+","A-","steady","B","System-dependent behind a line in transition — the quiet risk in Detroit."],
+["ATL","Michael Penix Jr.",26,"B","B-","B+","rise","B-","The org hasn't fully committed; big arm + Bijan/London = real upside if he holds the job."],
+["NO","Tyler Shough",26,"B","B+","B-","rise","B-","Six good weeks under Kellen Moore is the whole résumé — the org drafted him weapons anyway."],
+["TEN","Cam Ward",24,"B","B","B-","rise","B-","Sacked a league-high 55 times and started all 17 anyway; Saleh/Daboll and Tate arrive."],
+["PIT","Aaron Rodgers",42,"B","B+","B+","fall","C+","A 42-year-old farewell tour in a run-first McCarthy reunion; Allar is the future bet."],
+["LV","Fernando Mendoza",22,"B","B","C-","rise","C+","No. 1 overall behind a rebuilt line with the league's thinnest WR room; Cousins may open."],
+["MIN","J.J. McCarthy",23,"B-","A-","A-","steady","C+","Best supporting cast of any young QB — 2025 didn't show starter-level play. No-excuses year."],
+["CAR","Bryce Young",25,"B-","B","B-","steady","C+","Fifth-year option exercised; the growth curve is real but shallow. McMillan helps."],
+["IND","Daniel Jones",29,"C+","B","B","steady","C","Injured on a short-term deal with Richardson lurking; Taylor minimizes the ask."],
+["ARI","Jacoby Brissett",33,"C+","B-","B","steady","C","A bridge by design — Carson Beck starts at some point in 2026, ready or not."],
+["MIA","Malik Willis",27,"C+","C+","D","rise","C-","Three career starts under LaFleur is the entire evidence base; the WR room is the league's worst."],
+["NYJ","Geno Smith",35,"C+","B-","B-","fall","C-","League-leading 17 INTs at 35; the Jets are openly pointed at the 2027 QB class."],
+["CLE","Deshaun Watson",30,"C-","B-","C+","steady","D","Hasn't played since 2024 and was poor then; Sanders looms behind the league's worst QB room."]];
+
+const TEP=[
+["ARI","Trey McBride",26,"A+","C+","Target-Hog Y","B-","steady","A+","The most complete every-down TE in football, in his prime years."],
+["LV","Brock Bowers",23,"A+","C+","Alpha Receiver at TE","B","rise","A+","He IS the Raiders passing game at 23 — the best long-window TE asset alive."],
+["IND","Tyler Warren",24,"A","C+","Do-Everything Weapon","B","rise","A","Used everywhere as a rookie — wildcat, slot, inline. Only the QB churn slows him."],
+["CHI","Colston Loveland",22,"A-","A-","Move-TE Matchup Piece","A","rise","A-","Ben Johnson's LaPorta blueprint with a higher draft pedigree; blocking must come."],
+["DET","Sam LaPorta",25,"A-","B+","Seam-Stretching Y","B+","steady","B+","The position's bounce-back bet after an injury-riddled nine-game 2025."],
+["GB","Tucker Kraft",25,"A-","A-","YAC Bully","A-","steady","B+","Pre-injury, a top-3 TE by yards after contact — the ACL timeline is the question."],
+["MIN","T.J. Hockenson",29,"B+","C+","Chain-Moving Y","A-","steady","B","Still the security blanket; 29 with a rebuilt knee and a shaky QB."],
+["ATL","Kyle Pitts",25,"B+","B-","Big-Slot Unicorn","B-","rise","B","The extension says the org finally believes — now the usage has to match the tools."],
+["SF","George Kittle",32,"A","B+","Complete Y","A","fall","B","Expected back Week 1 from the torn Achilles; even 80% Kittle changes the offense."],
+["DAL","Jake Ferguson",27,"B+","A-","Volume Y","B","steady","B","Career year (82-8) came with Lamb hurt — regression is priced in, relevance isn't."],
+["BUF","Dalton Kincaid",26,"B+","A+","Big-Slot Receiver","A-","steady","B","Allen's efficiency lifts him; the two-TE room splits what an alpha would consolidate."],
+["LAC","Oronde Gadsden II",23,"B+","A","Ascending Flex","B+","rise","B","Herbert found him constantly late in 2025 — the chemistry is real."],
+["KC","Travis Kelce",36,"B+","A+","Option-Route Savant","A","fall","B-","Back on a one-year, $12M farewell deal at 36; the Mahomes axis gets one more run."],
+["PHI","Dallas Goedert",31,"B+","B+","YAC Y","B+","fall","B-","Post-Brown target consolidation could make 31 his last big year."],
+["CLE","Harold Fannin Jr.",22,"B+","D","YAC Move-TE","B-","rise","B-","Creative, productive rookie usage despite the QB situation strangling everything."],
+["NYJ","Mason Taylor",22,"B","C","Ascending Y","B-","rise","B-","Pedigree and rookie tape both point up — buy before the 2027 QB arrives."],
+["LAR","Terrance Ferguson",24,"B","A","Committee Beneficiary","A","rise","B-","Whoever wins McVay's stockpiled TE room inherits Stafford targets."],
+["MIA","Greg Dulcich",26,"B","C","Seam Sleeper","C+","rise","C+","2nd in the NFL in TE yards per route run from Week 9 on — the default No. 1 option."],
+["BAL","Isaiah Likely",26,"B","A+","Flex Playmaker","B","steady","C+","The full-time takeover keeps being one year away; Doyle's scheme loves move TEs."],
+["HOU","Dalton Schultz",30,"B","A-","Reliable Y","B","steady","C+","Stroud trusts him on money downs — bankable floor, capped ceiling."],
+["DEN","Evan Engram",31,"B","B+","Oversized Slot","A","fall","C+","Payton's joker role fits perfectly; 31-year-old speed players decline abruptly."],
+["NO","Oscar Delp",23,"B","B-","Rookie Y","B+","rise","C+","Rookie TEs rarely produce Year 1 — this is a 2027-28 bet with the frame to pay."],
+["TB","Cade Otton",27,"B-","B+","Steady Y","B+","steady","C+","Evans's exit frees targets Otton has never commanded — now or never."],
+["CIN","Mike Gesicki",30,"B-","A+","Big-Slot Specialist","B","steady","C","Third option by design; Burrow's red-zone trust keeps the TD floor alive."],
+["NE","Hunter Henry",31,"B-","A","Veteran Chain-Mover","B+","fall","C","Maye still finds him when structure breaks — Brown's arrival pushes him down."],
+["PIT","Pat Freiermuth",27,"B","B-","Two-TE Committee","B","steady","C","Run-heavy identity plus two-TE sets equals split targets forever."],
+["SEA","AJ Barner",24,"B-","B+","Red-Zone Y","A-","rise","C","TD efficiency keeps earning goal-line packages behind JSN and Kupp."],
+["JAX","Brenton Strange",25,"B-","B","Ascending Y","A-","rise","C","Coen's scheme feeds TEs more than people notice; flashes need a full season."],
+["WAS","Chig Okonkwo",26,"C+","A","Unproven Committee","B+","steady","C-","Never sustained receiving production across schemes; the 12-personnel shift may hide it."],
+["NYG","Theo Johnson",25,"C+","B","Developmental Y","B","steady","C-","Dart's quiet rookie-year chemistry piece; Nabers's return shrinks the pie."],
+["TEN","Gunnar Helm",23,"C+","B","Young Y","B","rise","C-","Earned Ward's late-season trust; the WR overhaul pushes TEs to the back of the line."],
+["CAR","Tommy Tremble",26,"C+","B-","Blocking-First Y","B","steady","D+","30th in TE receiving yards in 2025 and nothing about the plan changed."]];
+
+
+const WRT=[
+{a:"CIN",upj:"A",utr:"steady",ps:[
+ ["Ja'Marr Chase","WR1",26,"A+","A+","B","True X Alpha","steady","A+","Five straight 1,000-yard years; the best receiver alive with Burrow healthy."],
+ ["Tee Higgins","WR2",27,"A-","A+","B","Elite 1B","steady","B+","11 TDs in 2025; the best second option in football, and paid like it."],
+ ["Andrei Iosivas","WR3",26,"C+","A+","B","Red-Zone Size","steady","C","Third in the pecking order by a mile — but Burrow finds him scoring."]]},
+{a:"SEA",upj:"A",utr:"steady",ps:[
+ ["Jaxon Smith-Njigba","WR1",24,"A+","B+","A-","Slot Alpha","steady","A+","Reigning OPOY off a league-best 1,793 yards at 24 — the new standard."],
+ ["Cooper Kupp","WR2",33,"B","B+","A-","Veteran Slot","fall","B-","Found a late-career life as JSN's No. 2 — a role, not a rebirth."],
+ ["Rashid Shaheed","WR3",27,"B-","B+","A-","Vertical Burner","steady","C+","Midseason 2025 pickup who gives the champs their deep element."]]},
+{a:"MIN",upj:"A-",utr:"steady",ps:[
+ ["Justin Jefferson","WR1",27,"A+","C+","A-","True X Alpha","steady","A","Six 1,000-yard seasons through five different QBs; talent-proof production."],
+ ["Jordan Addison","WR2",24,"B+","C+","A-","Polished No. 2","steady","B-","Efficient and young; the QB grade drags every Viking pass-catcher."],
+ ["Jauan Jennings","WR3",29,"B-","C+","A-","Physical YAC","steady","C","Imported toughness — blocks, moves chains, sets the tone."]]},
+{a:"DET",upj:"A-",utr:"steady",ps:[
+ ["Amon-Ra St. Brown","WR1",26,"A","B+","B+","Volume Slot","steady","A","172 targets in 2025; three straight 115-catch seasons of metronome production."],
+ ["Jameson Williams","WR2",25,"B+","B+","B+","Field-Stretcher","steady","B","Elite play speed; consistency is the last step to a second contract year."],
+ ["Isaac TeSlaa","WR3",24,"C+","B+","B+","Developmental Size","rise","C-","The org keeps investing snaps — a Year-2 role expansion candidate."]]},
+{a:"DAL",upj:"A-",utr:"steady",ps:[
+ ["CeeDee Lamb","WR1",27,"A","A-","B","Complete Alpha","steady","A","Fifth straight 1,000-yard year despite missing games; elite when targeted."],
+ ["George Pickens","WR2",25,"A-","A-","B","Volatile X","steady","B+","93-1,429 in Year 1 as a Cowboy; contract-year volatility cuts both ways."],
+ ["Ryan Flournoy","WR3",24,"C+","A-","B","Traits Depth","rise","C-","Camp-darling athleticism chasing a real role behind two alphas."]]},
+{a:"LAR",upj:"B+",utr:"fall",ps:[
+ ["Puka Nacua","WR1",25,"A","A","A","YAC Alpha","steady","A-","The engine of an MVP offense; leans on him more than the box score shows."],
+ ["Davante Adams","WR2",33,"B+","A","A","Red-Zone Savant","fall","B-","9 TDs inside the 5 in 2025 — automatic scoring, declining everything else."],
+ ["Jordan Whittington","WR3",25,"C+","A","A","Blocking Glue","steady","C-","McVay trusts him situationally; the third role is his to keep."]]},
+{a:"HOU",upj:"B+",utr:"rise",ps:[
+ ["Nico Collins","WR1",27,"A-","A-","B","Big X","steady","A-","A true contested-catch No. 1 entering his prime with Stroud ascending."],
+ ["Jayden Higgins","WR2",23,"B","A-","B","Big-Bodied Riser","rise","B-","525 yards and 6 TDs as a rookie; the Year-2 step makes Houston scary."],
+ ["Tank Dell","WR3",26,"B","A-","B","Explosive Wildcard","rise","C+","The return from a devastating knee injury is unknowable — the talent isn't."]]},
+{a:"NE",upj:"B+",utr:"rise",ps:[
+ ["A.J. Brown","WR1",29,"A","A","B+","Traded-For Alpha","rise","A-","Fresh start attached to an MVP-caliber QB; the AFC East calculus changes."],
+ ["Stefon Diggs","WR2",32,"B-","A","B+","Aging Route Artist","fall","C","Still wins with savvy; Brown's arrival makes him a luxury No. 2."],
+ ["Kayshon Boutte","WR3",24,"C+","A","B+","Ascending Depth","rise","C","Quietly productive 2025 stretches earned real rotational snaps."]]},
+{a:"CHI",upj:"B+",utr:"rise",ps:[
+ ["Rome Odunze","WR1",24,"A-","A-","A","Ascending X","rise","A-","Was on a breakout arc before injury; DJ Moore's exit hands him the keys."],
+ ["Luther Burden III","WR2",22,"B+","A-","A","YAC Slot","rise","B","13.9 YPR in a depth role as a rookie; the Year-2 usage spike is coming."],
+ ["Olamide Zaccheaus","WR3",29,"C+","A-","A","Veteran Utility","steady","C-","Reliable glue guy while the kids take over the target tree."]]},
+{a:"PIT",upj:"B",utr:"steady",ps:[
+ ["DK Metcalf","WR1",28,"B+","B-","B","Power X","steady","B","15 catches of 20+ yards in his Steelers debut; the QB caps the volume."],
+ ["Michael Pittman Jr.","WR2",28,"B","B-","B","Chain-Mover","steady","C+","80-catch reliability imported from Indy; the perfect Metcalf complement."],
+ ["Roman Wilson","WR3",25,"C+","B-","B","Slot Speed","rise","C-","Two lost years — the pedigree says there's still a player here."]]},
+{a:"PHI",upj:"B",utr:"steady",ps:[
+ ["DeVonta Smith","WR1",27,"A-","B+","B+","Refined Alpha","steady","B+","WR1 for the first time since college after the Brown trade — target ceiling unlocked."],
+ ["Makai Lemon","WR2",21,"B","B+","B+","Rookie YAC","rise","C+","Round 1 pick with a Golden Tate-style run-after-catch profile."],
+ ["Hollywood Brown","WR3",29,"B-","B+","B+","Veteran Speed","fall","C","Signed to keep safeties honest while the rookie develops."]]},
+{a:"JAX",upj:"B",utr:"rise",ps:[
+ ["Brian Thomas Jr.","WR1",23,"A-","B","A-","Vertical X","rise","B+","All-Pro rookie ceiling vs. a quiet 707-yard 2025 — the talent says buy the dip."],
+ ["Jakobi Meyers","WR2",29,"B","B","A-","Reliable Separator","steady","C+","Extended after the deadline deal; sure hands, zero drama."],
+ ["Parker Washington","WR3",24,"B-","B","A-","Slot Breakout","rise","C+","847 quiet yards in 2025 — Coen keeps scheming him open."]]},
+{a:"LAC",upj:"B",utr:"rise",ps:[
+ ["Ladd McConkey","WR1",24,"A-","A","B+","Slot Technician","rise","B+","2025 step-back needs reversing, but the Herbert chemistry is bankable."],
+ ["Quentin Johnston","WR2",24,"B","A","B+","Redeemed Size","steady","C+","The long-awaited breakout (8 TDs) finally landed — sustainability check now."],
+ ["Tre Harris","WR3",24,"B-","A","B+","Contested-Catch Riser","rise","C","Round 2 pedigree pushing for the No. 2 job outright."]]},
+{a:"TEN",upj:"B",utr:"rise",ps:[
+ ["Carnell Tate","WR1",21,"B+","B","B","Rookie Alpha Bet","rise","B","No. 4 overall pick asked to be a Day 1 No. 1 — variance in both directions."],
+ ["Calvin Ridley","WR2",31,"B","B","B","Veteran Stretch","fall","C+","Still wins deep, but the rookie's arrival starts his exit clock."],
+ ["Wan'Dale Robinson","WR3",25,"B-","B","B","Underneath Volume","steady","C+","Signed away from the Giants to be Ward's chain-moving outlet."]]},
+{a:"NYG",upj:"B",utr:"steady",ps:[
+ ["Malik Nabers","WR1",22,"A","B","B","Injured Alpha","rise","A-","Top-5 talent returning from a serious 2025 injury — the age-22 upside is enormous."],
+ ["Darius Slayton","WR2",29,"B-","B","B","Field-Stretcher","steady","C","Perennially useful deep threat; Nabers's return shrinks the pie."],
+ ["Jalin Hyatt","WR3",24,"C+","B","B","Speed Lottery Ticket","steady","C-","The 4.3 speed is still waiting on a defined role."]]},
+{a:"BUF",upj:"B",utr:"steady",ps:[
+ ["Khalil Shakir","WR1",26,"B","A+","A-","Efficient Slot","steady","C+","Allen's most trusted target in an alpha-less room."],
+ ["Keon Coleman","WR2",23,"B-","A+","A-","Size Project","steady","C+","The alpha tools are there; the route detail still isn't."],
+ ["Joshua Palmer","WR3",26,"B-","A+","A-","Steady Outside","steady","C","Free-agent pro who runs the routes Allen needs run."]]},
+{a:"KC",upj:"B",utr:"rise",ps:[
+ ["Rashee Rice","WR1",26,"B+","A+","A","YAC Slot","rise","B","When available, Mahomes's clear No. 1 — availability is the operative word."],
+ ["Xavier Worthy","WR2",23,"B","A+","A","Speed Weapon","rise","B-","The vertical gravity is real; usage consistency hasn't been."],
+ ["Jalen Royals","WR3",23,"C+","A+","A","Ascending Depth","rise","C","Bieniemy's offenses have a history of minting surprise WR value."]]},
+{a:"ARI",upj:"B-",utr:"steady",ps:[
+ ["Marvin Harrison Jr.","WR1",24,"B+","C+","B-","X Awaiting Liftoff","steady","B","Hasn't matched the draft billing yet; the talent bet stays alive through the window."],
+ ["Michael Wilson","WR2",26,"B-","C+","B-","Possession No. 2","steady","C","Steady hands, limited ceiling — a bridge QB doesn't help."],
+ ["Kendrick Bourne","WR3",31,"C+","C+","B-","Veteran Glue","fall","D+","Locker-room pro playing out the string."]]},
+{a:"TB",upj:"B-",utr:"steady",ps:[
+ ["Emeka Egbuka","WR1",23,"B+","B+","B+","Post-Evans Heir","rise","B","Evans's exit makes him the guy immediately; strong rookie tape says ready."],
+ ["Chris Godwin","WR2",30,"B","B+","B+","Veteran Slot","fall","C+","Injury recovery and age stack the odds — the pedigree keeps him relevant."],
+ ["Jalen McMillan","WR3",24,"B-","B+","B+","Rotational Riser","rise","C","Flashed as a rookie in 2024; the Evans targets have to go somewhere."]]},
+{a:"SF",upj:"B-",utr:"steady",ps:[
+ ["Mike Evans","WR1",33,"B+","B+","A","Red-Zone Titan","fall","B-","A decade of 1,000-yard seasons buys respect; 33 in a new offense is still 33."],
+ ["Ricky Pearsall","WR2",25,"B","B+","A","Developing Starter","rise","C+","The multi-year story in SF while Evans and Kirk bridge."],
+ ["Christian Kirk","WR3",29,"B-","B+","A","Slot Veteran","steady","C","Shanahan's YAC machine gives his skill set one more good home."]]},
+{a:"WAS",upj:"B-",utr:"fall",ps:[
+ ["Terry McLaurin","WR1",30,"B+","A","B+","Aging Alpha","fall","B-","10-catch injury year at 30 — the Daniels connection needs a full-season reboot."],
+ ["Deebo Samuel Sr.","WR2",30,"B-","A","B+","YAC Hybrid","fall","C","The 2021 version is gone; a situational weapon at this stage."],
+ ["Antonio Williams","WR3",22,"C+","A","B+","Rookie Sleeper","rise","C","Round 3 pick with a real path to targets in a thin, aging room."]]},
+{a:"GB",upj:"B-",utr:"steady",ps:[
+ ["Matthew Golden","WR1",23,"B","A-","A-","Ascending Committee Lead","rise","B-","The cleanest path to a Green Bay alpha finally emerging."],
+ ["Jayden Reed","WR2",26,"B","A-","A-","Gadget Slot","steady","C+","Explosive per touch; the committee design caps any one target share."],
+ ["Romeo Doubs","WR3",26,"B-","A-","A-","Possession Outside","steady","C","The steady hand in a rotation that refuses to pick a hierarchy."]]},
+{a:"DEN",upj:"C+",utr:"steady",ps:[
+ ["Courtland Sutton","WR1",30,"B","B+","A","Contested-Catch X","fall","C+","31 in October; Payton's scheme manufactures his production either way."],
+ ["Marvin Mims Jr.","WR2",24,"B-","B+","A","Gadget Speed","rise","C","Payton keeps expanding the package; the snaps must follow."],
+ ["Pat Bryant","WR3",23,"C+","B+","A","Developmental Outside","rise","C-","Drafted for the post-Sutton future — that future may be 2027."]]},
+{a:"NO",upj:"C+",utr:"rise",ps:[
+ ["Chris Olave","WR1",26,"B+","B-","B+","Route Artist","steady","B","Elite separator with a concussion history that never stops mattering."],
+ ["Jordyn Tyson","WR2",22,"B","B-","B+","Talented Rookie","rise","C+","Maybe the most gifted rookie WR — health concerns dropped him in the draft."],
+ ["Devaughn Vele","WR3",28,"C+","B-","B+","Big-Bodied Depth","steady","C-","Acquired size and hands for the intermediate game."]]},
+{a:"NYJ",upj:"C+",utr:"steady",ps:[
+ ["Garrett Wilson","WR1",26,"A-","C","B-","Wasted Alpha","steady","B","Has produced through five QBs — Geno at 35 makes it six."],
+ ["Josh Reynolds","WR2",31,"C+","C","B-","Veteran Filler","fall","C-","A placeholder while the Jets aim at 2027."],
+ ["Arian Smith","WR3",24,"C+","C","B-","Pure Speed","steady","D+","A one-note deep threat until the route tree grows."]]},
+{a:"IND",upj:"C+",utr:"steady",ps:[
+ ["Josh Downs","WR1",24,"B+","C+","B","Slot Separator","steady","B-","Quietly one of the best slot separators alive; Pittman's exit adds volume."],
+ ["Alec Pierce","WR2",26,"B-","C+","B","Deep Specialist","steady","C","Elite air-yards profile, one-dimensional usage."],
+ ["Adonai Mitchell","WR3",24,"B-","C+","B","Talent Tease","steady","C-","The traits scream starter; the tape keeps whispering inconsistency."]]},
+{a:"ATL",upj:"C+",utr:"steady",ps:[
+ ["Drake London","WR1",25,"A-","B-","B-","Contested Alpha","steady","B+","A legit X whose ceiling is capped only by the QB uncertainty."],
+ ["Darnell Mooney","WR2",28,"B-","B-","B-","Vertical No. 2","steady","C","Reliable deep production when the QB can find him."],
+ ["KhaDarel Hodge","WR3",31,"C","B-","B-","Special-Teams Vet","steady","D+","On the roster for the third phase more than the second."]]},
+{a:"CAR",upj:"C+",utr:"rise",ps:[
+ ["Tetairoa McMillan","WR1",23,"A-","B-","B","Rookie-Year Alpha","rise","A-","1,000 yards as a rookie with nothing around him — a budding superstar."],
+ ["Jalen Coker","WR2",24,"B-","B-","B","Late Bloomer","rise","C","134 yards in the Wild Card loss; extended for a reason."],
+ ["Xavier Legette","WR3",25,"C+","B-","B","Traits Reclamation","steady","C-","The athletic profile hasn't translated — last call approaching."]]},
+{a:"CLE",upj:"C",utr:"steady",ps:[
+ ["Jerry Jeudy","WR1",27,"B","D","B-","Talent Without a Trigger","steady","C+","The route-running deserves a real passer; Cleveland can't provide one."],
+ ["Cedric Tillman","WR2",26,"C+","D","B-","Size Depth","steady","C-","Flashes get erased by the QB situation."],
+ ["Isaiah Bond","WR3",22,"C+","D","B-","Speed Project","rise","C-","Elite 40 time waiting on an offense that can use it."]]},
+{a:"LV",upj:"C",utr:"rise",ps:[
+ ["Tre Tucker","WR1",25,"C+","C+","B","Bowers-Dependent","steady","C-","The nominal WR1 has never hit 700 yards — the room runs through the TE."],
+ ["Jack Bech","WR2",23,"C+","C+","B","Rookie Hope","rise","C-","The draft investment says the org sees more than the depth chart shows."],
+ ["Dont'e Thornton Jr.","WR3",23,"C","C+","B","Vertical Size","rise","D+","6'5\" with 4.3 speed — a Mendoza deep-ball lottery ticket."]]},
+{a:"MIA",upj:"D+",utr:"rise",ps:[
+ ["Jalen Tolbert","WR1",27,"C","C","C+","Forced Starter","steady","D+","A WR4 pressed into the WR1 role of the league's worst corps."],
+ ["Tutu Atwell","WR2",26,"C","C","C+","Speed Filler","steady","D+","Field-stretching burner in an offense with no one to stretch for."],
+ ["Chris Bell","WR3",22,"C+","C","C+","Rookie Volume Bet","rise","C-","The rookie most likely to lead this roster in targets by December."]]},
+{a:"BAL",upj:"C+",utr:"steady",ps:[
+ ["Zay Flowers","WR1",26,"B+","A+","B","YAC Slot-X","steady","B","Top-15 talent stuck in a run-first identity; Doyle's scheme is the variable."],
+ ["Rashod Bateman","WR2",26,"B-","A+","B","Perpetual Tease","steady","C","Efficient on low volume every year; the volume never comes."],
+ ["DeAndre Hopkins","WR3",34,"C+","A+","B","Legend's Encore","fall","D+","Hands-only at this point — but the hands are still special."]]}];
+
+
+const RBT=[
+{a:"ATL",upj:"A",utr:"steady",ps:[
+ ["Bijan Robinson","RB1",24,"A+","Do-It-All Bellcow","A","steady","A+","League-best ~2,300 scrimmage yards; the position's gold standard in his prime."],
+ ["Brian Robinson Jr.","RB2",27,"B-","Insurance Hammer","C+","steady","C","Signed to keep Bijan's workload survivable."]]},
+{a:"PHI",upj:"A-",utr:"fall",ps:[
+ ["Saquon Barkley","RB1",29,"A","Home-Run Bellcow","A+","fall","A-","Regression already showed post-2,000; still a top-3 talent when the line holds."],
+ ["Tank Bigsby","RB2",24,"B","Explosive Handcuff","A-","steady","C+","5.9 YPC in limited work; the best insurance Barkley's ever had."]]},
+{a:"BUF",upj:"A-",utr:"steady",ps:[
+ ["James Cook","RB1",26,"A-","Efficient Lead","A-","steady","A-","Leveled up in 2025; Allen's goal-line vulturing is the only ceiling."],
+ ["Ray Davis","RB2",26,"C+","Committee Reserve","B-","steady","C-","Spot production whenever Cook needs a breather."]]},
+{a:"DET",upj:"A-",utr:"rise",ps:[
+ ["Jahmyr Gibbs","RB1",24,"A","Explosive Lead","A+","rise","A","Montgomery's trade ends the split — per-touch, the most explosive back alive."],
+ ["Sione Vaki","RB2",23,"C+","Gadget Reserve","B-","rise","C-","Special-teams ace earning offensive snaps behind Gibbs."]]},
+{a:"IND",upj:"B+",utr:"steady",ps:[
+ ["Jonathan Taylor","RB1",27,"A","Workhorse Bellcow","A-","steady","A-","Career-best 2025, but he's missed games in three of the last four years."],
+ ["DJ Giddens","RB2",23,"B-","Handcuff Plus","B","rise","C","Taylor's injury history makes this the league's most valuable handcuff."]]},
+{a:"BAL",upj:"B+",utr:"fall",ps:[
+ ["Derrick Henry","RB1",32,"A","Downhill Hammer","A-","fall","B+","5.2 YPC and 16 TDs at 31 — but 32-year-old backs are one cliff away."],
+ ["Justice Hill","RB2",28,"B-","Passing-Down Specialist","B","steady","C","The perfect Henry complement; nothing more, nothing less."]]},
+{a:"LAR",upj:"B+",utr:"steady",ps:[
+ ["Kyren Williams","RB1",25,"A-","High-Floor Lead","B+","steady","B+","Led all rushers in success rate; McVay's trust on choice routes is real value."],
+ ["Blake Corum","RB2",25,"B-","Explosive 1B","B+","steady","C","Keeps taking work from Kyren because the burst is real."]]},
+{a:"MIA",upj:"B+",utr:"steady",ps:[
+ ["De'Von Achane","RB1",24,"A","Space Weapon","A+","steady","A-","Ruinous in space; the roster's one elite piece on offense."],
+ ["Jaylen Wright","RB2",23,"C+","Speed Reserve","B+","steady","C-","Track speed behind Achane — the league's fastest RB room."]]},
+{a:"NYJ",upj:"B+",utr:"steady",ps:[
+ ["Breece Hall","RB1",25,"A-","Dual-Threat Lead","A-","steady","B+","First 1,000-yard season earned a three-year extension; stacked boxes await."],
+ ["Braelon Allen","RB2",22,"C+","Power Change-Up","B-","steady","C-","Young thumper who keeps Hall's carries honest."]]},
+{a:"ARI",upj:"B+",utr:"rise",ps:[
+ ["Jeremiyah Love","RB1",21,"A-","Rookie Phenom","A","rise","B+","Highest-drafted RB since Barkley at No. 3 overall — franchise-altering capital."],
+ ["Trey Benson","RB2",24,"B-","Quality Insurance","B","steady","C-","A former Round 3 pick relegated by the Love selection."]]},
+{a:"SF",upj:"B",utr:"fall",ps:[
+ ["Christian McCaffrey","RB1",30,"A","Receiving Bellcow","A-","fall","B","Still the most complete back alive when active — 'when' does heavy lifting at 30."],
+ ["Isaac Guerendo","RB2",26,"C+","Explosive Handcuff","B+","steady","C-","Elite athleticism; CMC's file makes him permanently relevant."]]},
+{a:"KC",upj:"B",utr:"rise",ps:[
+ ["Kenneth Walker III","RB1",25,"B+","Contact-Balance Workhorse","B+","rise","B","The 3yr/$43M deal says workhorse; Bieniemy's RB usage history says volume."],
+ ["Emmett Johnson","RB2",22,"B-","Rookie Committee","B","rise","C","Drafted into immediate passing-down relevance behind Walker."]]},
+{a:"GB",upj:"B",utr:"steady",ps:[
+ ["Josh Jacobs","RB1",28,"A-","Grinder Bellcow","B","steady","B","The offense's identity piece and TD engine, volume-dependent at 28."],
+ ["MarShawn Lloyd","RB2",25,"C+","Explosive Reserve","B+","rise","C-","The talent flashes whenever the injuries pause."]]},
+{a:"NE",upj:"B",utr:"rise",ps:[
+ ["TreVeyon Henderson","RB1",23,"B+","Explosive Committee Lead","A","rise","B","Rookie big-play juice popped; must seize the early-down work from Stevenson."],
+ ["Rhamondre Stevenson","RB2",28,"B-","Veteran Grinder","C+","fall","C","The early-down floor while Henderson ascends past him."]]},
+{a:"CHI",upj:"B-",utr:"steady",ps:[
+ ["D'Andre Swift","RB1",27,"B","Zone Committee Lead","B+","steady","C+","Ben Johnson benches backs who miss reads — Monangai is coming for work."],
+ ["Kyle Monangai","RB2",24,"B-","Ascending Committee","B-","rise","C","Earned real late-2025 work; Johnson trusts him on reads."]]},
+{a:"JAX",upj:"B-",utr:"rise",ps:[
+ ["Bhayshul Tuten","RB1",24,"B+","Ascending Lead","A","rise","B","Etienne and Bigsby are gone — the flashes now have to be a full season."],
+ ["Chris Rodriguez Jr.","RB2",26,"C+","Short-Yardage Hammer","C","steady","C-","Imported for between-the-tackles dirty work behind Tuten."]]},
+{a:"DEN",upj:"B-",utr:"steady",ps:[
+ ["J.K. Dobbins","RB1",27,"B+","Health-Gated Lead","B+","steady","B-","The talent never left; the availability never lasts."],
+ ["RJ Harvey","RB2",25,"B","Receiving Change-Up","B+","rise","C+","The receiving chops earn standalone value regardless of Dobbins."]]},
+{a:"CLE",upj:"B-",utr:"rise",ps:[
+ ["Quinshon Judkins","RB1",22,"B+","Power Lead","B+","rise","B","Young, cheap, talented — the one clean positive on Cleveland's offense."],
+ ["Dylan Sampson","RB2",22,"B-","Satellite Back","B+","rise","C","Pass-game juice gives him standalone snaps even behind Judkins."]]},
+{a:"NYG",upj:"B-",utr:"rise",ps:[
+ ["Cam Skattebo","RB1",24,"B","Violent Lead","B+","rise","B-","Contact-balance cult hero returning from injury into an unsettled split."],
+ ["Tyrone Tracy Jr.","RB2",26,"B-","Change-Of-Pace","B","steady","C","Proved starter-capable in 2024; now the 1B in a crowded room."]]},
+{a:"HOU",upj:"C+",utr:"steady",ps:[
+ ["David Montgomery","RB1",29,"B","Veteran Hammer","B-","steady","C+","Imported from Detroit as a stabilizer; 29-year-old power backs age fast."],
+ ["Woody Marks","RB2",24,"C+","Receiving Change-Up","B-","rise","C-","The pass-game complement to Montgomery's hammer role."]]},
+{a:"LAC",upj:"C+",utr:"rise",ps:[
+ ["Omarion Hampton","RB1",23,"B+","Ascending Lead","B+","rise","B","Year 2 behind a healthier line is the clean upside case."],
+ ["Najee Harris","RB2",28,"B-","Veteran Floor","C+","fall","C","Never misses games, never breaks one — the definition of a floor."]]},
+{a:"DAL",upj:"C+",utr:"steady",ps:[
+ ["Javonte Williams","RB1",26,"B","Rejuvenated Lead","B","steady","B-","1,200 and 11 TDs bought a three-year deal — real or contract-year mirage?"],
+ ["Jaydon Blue","RB2",22,"B-","Speed Change-Up","A-","rise","C","The home-run complement to Javonte's between-the-tackles work."]]},
+{a:"TB",upj:"C+",utr:"steady",ps:[
+ ["Bucky Irving","RB1",24,"B+","Bounce-Back Lead","B+","steady","B-","YPC fell two full yards to 3.4 — the rookie-year version is the real one."],
+ ["Kenneth Gainwell","RB2",27,"B-","Receiving Back","B","steady","C","Arrives off a 73-catch, 1,000-scrimmage-yard Pittsburgh breakout."]]},
+{a:"SEA",upj:"C+",utr:"steady",ps:[
+ ["Jonah Coleman","RB1",22,"B-","Forced Lead","B","rise","C+","Walker left and Charbonnet's ACL wipes the season — real work by default."],
+ ["Kenny McIntosh","RB2",26,"C","Committee Depth","C+","steady","D+","Champion-team depth pressed upward by the Charbonnet injury."]]},
+{a:"PIT",upj:"C+",utr:"rise",ps:[
+ ["Kaleb Johnson","RB1",23,"B","Zone Runner","B","rise","C+","A run-first McCarthy identity means the volume is coming — ready or not."],
+ ["Jaylen Warren","RB2",27,"B-","Satellite Veteran","B","steady","C-","Passing-down reliability in a rookie-led backfield."]]},
+{a:"CIN",upj:"C+",utr:"steady",ps:[
+ ["Chase Brown","RB1",26,"B","Pass-Game Lead","B","steady","B-","The receiving floor keeps him on the field in a WR-first offense."],
+ ["Samaje Perine","RB2",30,"C+","Pass-Pro Specialist","C","fall","D+","Burrow's third-down bodyguard — the blocking keeps him rostered."]]},
+{a:"NO",upj:"C",utr:"steady",ps:[
+ ["Travis Etienne Jr.","RB1",27,"B","Fresh-Start Speed","B+","steady","C+","Jacksonville moved on for a reason; the burst is the bet, vision the doubt."],
+ ["Kendre Miller","RB2",24,"C+","Talent Tease","B","steady","C-","Flashes annually, then disappears — a last chance year."]]},
+{a:"MIN",upj:"C",utr:"steady",ps:[
+ ["Jordan Mason","RB1",27,"B-","Physical Lead","B-","steady","C+","A hammer without a complement in an offense that needs the threat."],
+ ["Zavier Scott","RB2",26,"C","Satellite Depth","C+","steady","D+","Pass-game utility in a backfield begging for reinforcement."]]},
+{a:"TEN",upj:"C",utr:"fall",ps:[
+ ["Tony Pollard","RB1",29,"B-","Aging Lead","B-","fall","C","Expiring value curve behind a bottom-tier line."],
+ ["Tyjae Spears","RB2",25,"C+","Receiving Complement","B-","steady","C-","The passing-down half of an aging, capped backfield."]]},
+{a:"LV",upj:"C",utr:"rise",ps:[
+ ["Ashton Jeanty","RB1",22,"A-","Franchise Back, Bad Context","A","rise","B+","The league's worst run-blocking buried his rookie year; Kubiak's zone scheme is the fix."],
+ ["Zamir White","RB2",26,"C","Depth Hammer","C","steady","D+","A between-the-tackles breather for the Jeanty show."]]},
+{a:"CAR",upj:"C-",utr:"rise",ps:[
+ ["Jonathon Brooks","RB1",23,"B-","Injury-Delayed Talent","B","rise","C","Two lost seasons and counting — we've still never seen him healthy."],
+ ["Rico Dowdle","RB2",28,"C+","Veteran Floor","C+","steady","C-","Steady 2025 keeps the floor intact while Brooks heals."]]},
+{a:"WAS",upj:"C-",utr:"steady",ps:[
+ ["Jacory Croskey-Merritt","RB1",25,"C+","Patchwork Lead","B-","steady","C-","Led Sharp's dead-last room in rushing; the job is his by default."],
+ ["Rachaad White","RB2",27,"C+","Cast-Off Receiver","C+","fall","D+","Tampa moved on; the receiving chops keep him employed."]]}];
+
+/* Build player objects for flat tabs */
+const mk=(arr,shape)=>arr.filter(x=>x.length>1).map((x,i)=>{const o={r:i+1};shape.forEach((k,j)=>o[k]=x[j]);return o;});
+const QBD=mk(QBP,["a","p","age","tal","coa","wep","tr","pj","nt"]);
+const TED=mk(TEP,["a","p","age","tal","qb","ar","coa","tr","pj","nt"]);
+QBD.forEach(t=>t.role="QB1");TED.forEach(t=>t.role="TE1");
+/* Grouped teams: assign unit ranks + build player objects */
+const shapeWR=["p","role","age","tal","qb","coa","ar","tr","pj","nt"];
+const shapeRB=["p","role","age","tal","ar","bp","tr","pj","nt"];
+WRT.forEach((t,i)=>{t.r=i+1;t.ps=t.ps.map(x=>{const o={a:t.a};shapeWR.forEach((k,j)=>o[k]=x[j]);return o;});});
+RBT.forEach((t,i)=>{t.r=i+1;t.ps=t.ps.map(x=>{const o={a:t.a};shapeRB.forEach((k,j)=>o[k]=x[j]);return o;});});
+
+const trendMeta={rise:{label:"Rising",color:"var(--rise)",arrow:"▲",rank:3},steady:{label:"Steady",color:"var(--steady)",arrow:"▬",rank:2},fall:{label:"Declining",color:"var(--fall)",arrow:"▼",rank:1}};
+const gcol=g=>{const c=g[0];return c==="A"?"var(--gA)":c==="B"?"var(--gB)":c==="C"?"var(--gC)":c==="D"?"var(--gD)":"var(--gF)";};
+const gbg=g=>{const c=g[0];return c==="A"?"rgba(55,201,138,.14)":c==="B"?"rgba(124,195,106,.14)":c==="C"?"rgba(232,178,74,.14)":c==="D"?"rgba(224,102,74,.14)":"rgba(201,75,75,.14)";};
+const gscore=g=>({"A+":97,"A":93,"A-":90,"B+":87,"B":83,"B-":80,"C+":77,"C":73,"C-":70,"D+":67,"D":63,"D-":60,"F":50}[g]||0);
+
+const TABS={
+ ol:{name:"O-Line",n:32,unit:"units",desc:"Team units — <b>Continuity</b> (lit segments = returning ’25 starters), <b>Depth</b> (reserve quality), age, and contract runway on top of raw talent.",
+   grid:"40px minmax(150px,1.5fr) 124px 74px 58px 94px 104px 58px",data:OL,
+   cols:[["r","#","rank"],["team","Team","team"],["cont","Continuity","cont"],["dep","Depth","gchip"],["age","Age","num"],["con","Contract","cbar"],["tr","Trend","trend"],["pj","Proj","proj"]],
+   personnel:t=>["LT","LG","C","RG","RT"].map((p,i)=>[p,t.ol[i]]),
+   lines:t=>[["risk-k","Key risk",t.rk],["depth-k","Depth",t.dn],["note-k","Note",t.nt]],
+   legend:'<div class="grp"><span class="lbl">Continuity</span><span class="meter-demo"><i class="seg on"></i><i class="seg on"></i><i class="seg on"></i><i class="seg"></i><i class="seg"></i></span><span style="font-size:11px">lit = returning starters</span></div>'},
+ qb:{name:"QB",n:32,unit:"quarterbacks",desc:"All 32 projected Week 1 starters, individually — <b>talent</b>, <b>age</b>, <b>coaching</b> (play-caller + development), and <b>weapons</b> (the cast they throw to).",
+   grid:"40px minmax(150px,1.35fr) 96px 54px 68px 68px 68px 78px",data:QBD,
+   cols:[["r","#","rank"],["p","Player","player"],["team","Team","tmini"],["age","Age","num"],["tal","Talent","gchip"],["coa","Coach","gchip"],["wep","Wpns","gchip"],["pj","Proj","proj"]],
+   lines:t=>[["note-k","Scout note",t.nt]],legend:""},
+ wr:{name:"WR",n:32,unit:"WR rooms · 96 receivers",group:true,desc:"Organized <b>by team</b> — 32 rooms ranked by unit strength, each showing its <b>top three receivers</b> with individual grades for <b>talent</b>, <b>age</b>, <b>QB</b>, <b>coaching</b>, and <b>usage archetype</b>. Tap a team to open scout notes.",
+   grid:"64px minmax(150px,1.35fr) 54px 64px 58px 62px minmax(120px,.95fr) 74px",data:WRT,
+   cols:[["role","Role","rolehdr"],["p","Player","gpplayer"],["age","Age","num"],["tal","Talent","gchip"],["qb","QB","gchip"],["coa","Coach","gchip"],["ar","Archetype","arch"],["pj","Proj","proj"]],
+   legend:""},
+ rb:{name:"RB",n:32,unit:"backfields · 64 backs",group:true,desc:"Organized <b>by team</b> — 32 backfields ranked by unit strength, each showing its <b>top two backs</b> with individual grades for <b>talent</b>, <b>age</b>, <b>usage archetype</b>, and <b>big-play ability</b>. Tap a team to open scout notes.",
+   grid:"64px minmax(150px,1.35fr) 54px 64px minmax(130px,1fr) 66px 74px",data:RBT,
+   cols:[["role","Role","rolehdr"],["p","Player","gpplayer"],["age","Age","num"],["tal","Talent","gchip"],["ar","Archetype","arch"],["bp","Big-Play","gchip"],["pj","Proj","proj"]],
+   legend:""},
+ te:{name:"TE",n:32,unit:"tight ends",desc:"Every team's <b>TE1</b>, ranked individually. Factors: <b>talent</b>, <b>age</b>, the <b>QB</b>, <b>usage archetype</b> (inline Y, big slot, move), and <b>coaching</b> scheme fit.",
+   grid:"40px minmax(150px,1.3fr) 96px 54px 64px 58px minmax(122px,.95fr) 62px 74px",data:TED,
+   cols:[["r","#","rank"],["p","Player","player"],["team","Team","tmini"],["age","Age","num"],["tal","Talent","gchip"],["qb","QB","gchip"],["ar","Archetype","arch"],["coa","Coach","gchip"],["pj","Proj","proj"]],
+   lines:t=>[["note-k","Scout note",t.nt]],legend:""}
+};
+
+const SOURCES=[
+["Ranking baseline","FTN Fantasy — 2026 OL Rankings","All-32 OL unit ranks weighted for continuity, depth, and film.","https://ftnfantasy.com/nfl/2026-offensive-line-rankings","ftnfantasy.com"],
+["Ranking baseline","Sharp — 2026 OL Rankings","Staff-voted 2026-only OL ranks; the board this projection diverges from.","https://www.sharpfootballanalysis.com/analysis/best-nfl-offensive-line-rankings/","sharpfootballanalysis.com"],
+["QB baseline","Sharp — 2026 QB Rankings","Staff-voted 2026 QB ranks from the Preview Book.","https://www.sharpfootballanalysis.com/analysis/2026-nfl-quarterback-rankings/","sharpfootballanalysis.com"],
+["QB tiers","CBS Sports — QB Tiers 2026","All 32 projected starters placed into tiers before the season.","https://www.cbssports.com/nfl/news/nfl-quarterback-rankings-2026-tiers/","cbssports.com"],
+["WR/TE baseline","Sharp — 2026 WR & TE Rankings","Staff-voted receiving-corps ranks behind the WR and TE boards.","https://www.sharpfootballanalysis.com/analysis/best-nfl-wide-receiver-tight-end-rankings/","sharpfootballanalysis.com"],
+["RB baseline","Sharp — 2026 RB Rankings","Staff-voted backfield ranks (Falcons 1st, Commanders 32nd).","https://www.sharpfootballanalysis.com/analysis/best-nfl-running-back-rankings/","sharpfootballanalysis.com"],
+["Playmakers","ESPN — 2026 Playmaker Rankings","All-32 WR/RB/TE group ranks with aging-curve projections.","https://www.espn.com/nfl/story/_/id/49154825/ranking-nfl-teams-offensive-groups-wr-rb-te-2026-season-best-playmakers","espn.com"],
+["Depth-weighted","4for4 — Projected OL Rankings","Grades the top eight per OL unit; informs the Depth column.","https://www.4for4.com/2026/preseason/2026-projected-offensive-line-rankings","4for4.com"],
+["Metrics","Sharp — OL Stats","Pressure rate, yards before contact, adjusted line yards.","https://www.sharpfootballanalysis.com/stats-nfl/nfl-offensive-line-stats/","sharpfootballanalysis.com"],
+["Verify · contracts","Over The Cap","Contract years, cap hits, positional spending by team.","https://overthecap.com/","overthecap.com"],
+["Verify · contracts","Spotrac","Per-player deal length and free-agency year.","https://www.spotrac.com/nfl","spotrac.com"],
+["Verify · age/stats","Pro Football Reference","Ages, games, snap counts behind the age figures.","https://www.pro-football-reference.com/","pro-football-reference.com"],
+["Verify · depth charts","Ourlads","Live depth charts for every role and camp battle referenced here.","https://www.ourlads.com/nfldepthcharts/","ourlads.com"],
+["Verify · grades","PFF","Positional grades behind much of the underlying analysis.","https://www.pff.com/","pff.com"]];
+
+const rowsEl=document.getElementById('rows'),countEl=document.getElementById('count'),headEl=document.getElementById('head');
+const state={tab:"ol",sort:"r",dir:1,q:"",conf:"",div:"",trend:"",open:new Set()};
+
+const meter=r=>{let s='<span class="segs">';for(let i=0;i<5;i++)s+=`<i class="seg${i<r?' on':''}"></i>`;return s+'</span>';};
+const cbar=n=>{let s='<span class="cbar">';for(let i=0;i<4;i++)s+=`<i class="${i<n?'on':''}"></i>`;return s+'</span>';};
+
+function sortVal(t,key,type){
+  if(type==="gchip"||type==="proj")return gscore(t[key]);
+  if(type==="cont")return t.ret*20+gscore(t.cont)/10;
+  if(type==="team"||type==="tmini")return TEAMS[t.a][0];
+  if(type==="player")return t.p;
+  if(type==="trend")return trendMeta[t.tr].rank;
+  return t[key];
+}
+function cellHTML(t,[key,label,type]){
+  const tm=trendMeta[t.tr];
+  switch(type){
+    case"rank":return`<div class="cell rank c-rank">${t.r}</div>`;
+    case"team":{const[nm,col,,dv]=TEAMS[t.a];return`<div class="cell team c-team"><span class="chip" style="background:${col}"></span><span style="min-width:0"><span class="tname">${nm}</span><span class="tabbr">${dv}</span></span></div>`;}
+    case"tmini":{const[,col]=TEAMS[t.a];return`<div class="cell tmini c-team"><span class="chip sm" style="background:${col}"></span><span><span class="ab">${t.a}</span><span class="tabbr" style="display:block">${t.role}</span></span></div>`;}
+    case"player":return`<div class="cell c-player"><span class="pname">${t.p}</span><span class="psub">${TEAMS[t.a][0]}</span></div>`;
+    case"rolehdr":return`<div class="cell c-role"><span class="role">${t.role}</span></div>`;
+    case"gpplayer":return`<div class="cell c-player"><span class="pname">${t.p}</span></div>`;
+    case"cont":return`<div class="cell c-stat c-wide" data-label="Continuity"><span class="meter">${meter(t.ret)}<span class="cgrade" style="color:${gcol(t.cont)}">${t.cont}</span></span></div>`;
+    case"gchip":return`<div class="cell c-stat" data-label="${label}"><span class="gchip" style="color:${gcol(t[key])};background:${gbg(t[key])}">${t[key]}</span></div>`;
+    case"num":return`<div class="cell num c-stat" data-label="${label}"><span class="datum">${typeof t[key]==="number"&&!Number.isInteger(t[key])?t[key].toFixed(1):t[key]}</span></div>`;
+    case"cbar":return`<div class="cell c-stat" data-label="${label}">${cbar(t[key])}</div>`;
+    case"arch":return`<div class="cell c-stat" data-label="Archetype"><span class="arch">${t[key]}</span></div>`;
+    case"trend":return`<div class="cell c-stat" data-label="Trend"><span class="trend" style="color:${tm.color}">${tm.arrow} ${tm.label}</span></div>`;
+    case"proj":return`<div class="cell c-proj" data-label="Proj"><span class="projcell"><span class="tarrow" style="color:${tm.color}" title="${tm.label}">${tm.arrow}</span><span class="grade" style="color:${gcol(t[key])}">${t[key]}</span></span></div>`;
+  }
+}
+function renderHead(){
+  const cfg=TABS[state.tab];
+  headEl.style.gridTemplateColumns=cfg.grid;
+  headEl.innerHTML=cfg.cols.map(c=>{
+    const[key,label,type]=c;
+    const sortable=!cfg.group||key==="pj";
+    const num=(type==="num"||type==="rank"||type==="proj")?" num":"";
+    const act=(!cfg.group&&state.sort===key)?' active':'';
+    const arw=(!cfg.group&&state.sort===key)?`<span class="arw">${state.dir>0?'▲':'▼'}</span>`:'';
+    return`<div class="cell${num}${act}" data-key="${sortable?key:''}" data-type="${type}" style="${sortable?'':'cursor:default'}">${label}${arw}</div>`;
+  }).join("");
+}
+function filterOK(a,tr){
+  if(state.conf&&TEAMS[a][2]!==state.conf)return false;
+  if(state.div&&TEAMS[a][3]!==state.div)return false;
+  if(state.trend&&tr!==state.trend)return false;
+  return true;
+}
+function render(){
+  const cfg=TABS[state.tab];
+  document.getElementById('tabdesc').innerHTML=`<b>${cfg.name} board</b> — projection-weighted for the next 1–3 seasons. ${cfg.desc}`;
+  document.getElementById('legend').innerHTML=cfg.legend+
+   '<div class="grp"><span class="lbl">Grades</span><span class="gchip" style="color:var(--gA);background:rgba(55,201,138,.14)">A</span><span class="gchip" style="color:var(--gC);background:rgba(232,178,74,.14)">C</span><span class="gchip" style="color:var(--gD);background:rgba(224,102,74,.14)">D</span></div>'+
+   '<div class="grp"><span class="lbl">Trend</span><span class="pill" style="background:rgba(55,201,138,.14);color:var(--rise)"><span class="dot" style="background:var(--rise)"></span>Rising</span><span class="pill" style="background:rgba(34,211,238,.14);color:var(--steady)"><span class="dot" style="background:var(--steady)"></span>Steady</span><span class="pill" style="background:rgba(224,102,74,.14);color:var(--fall)"><span class="dot" style="background:var(--fall)"></span>Declining</span></div>';
+  renderHead();
+  if(cfg.group){renderGroups(cfg);return;}
+  let data=cfg.data.filter(t=>{
+    const[nm]=TEAMS[t.a];
+    const names=(t.ol?t.ol.join(" "):t.p).toLowerCase();
+    if(state.q&&!(nm.toLowerCase().includes(state.q)||t.a.toLowerCase().includes(state.q)||names.includes(state.q)))return false;
+    return filterOK(t.a,t.tr);
+  });
+  const col=cfg.cols.find(c=>c[0]===state.sort)||cfg.cols[0];
+  data.sort((x,y)=>{
+    let a=sortVal(x,col[0],col[2]),b=sortVal(y,col[0],col[2]);
+    if(typeof a==="string"){a=a.toLowerCase();b=b.toLowerCase();}
+    return a<b?-1*state.dir:a>b?1*state.dir:x.r-y.r;
+  });
+  countEl.innerHTML=`<b>${data.length}</b> / ${cfg.n} ${cfg.unit}`;
+  if(!data.length){rowsEl.innerHTML=`<div class="empty"><b>No matches for those filters</b>Try clearing a filter or hit Reset.</div>`;return;}
+  rowsEl.innerHTML=data.map(t=>{
+    const id=state.tab+t.a+(t.role||"")+t.r;
+    const open=state.open.has(id);
+    const pers=cfg.personnel?`<div class="oline">${cfg.personnel(t).map(([p,n])=>`<div class="pos"><div class="p">${p}</div><div class="n">${n}</div></div>`).join("")}</div>`:"";
+    const lines=cfg.lines(t).map(([k,l,txt])=>`<p><span class="k ${k}">${l}</span>${txt}</p>`).join("");
+    return`<div class="item${open?' open':''}">
+      <div class="row data" data-id="${id}" style="grid-template-columns:${cfg.grid}">${cfg.cols.map(c=>cellHTML(t,c)).join("")}</div>
+      <div class="detail">${pers}<div class="risk">${lines}</div></div>
+    </div>`;
+  }).join("");
+}
+function renderGroups(cfg){
+  let groups=cfg.data.filter(g=>{
+    if(!filterOK(g.a,g.utr))return false;
+    if(state.q){
+      const[nm]=TEAMS[g.a];
+      const hit=nm.toLowerCase().includes(state.q)||g.a.toLowerCase().includes(state.q)||g.ps.some(p=>p.p.toLowerCase().includes(state.q));
+      if(!hit)return false;
+    }
+    return true;
+  });
+  if(state.sort==="pj")groups=[...groups].sort((x,y)=>(gscore(x.upj)-gscore(y.upj))*state.dir||x.r-y.r);
+  countEl.innerHTML=`<b>${groups.length}</b> / ${cfg.n} ${cfg.unit}`;
+  if(!groups.length){rowsEl.innerHTML=`<div class="empty"><b>No matches for those filters</b>Try clearing a filter or hit Reset.</div>`;return;}
+  rowsEl.innerHTML=groups.map(g=>{
+    const[nm,col,,dv]=TEAMS[g.a];
+    const id=state.tab+g.a;
+    const open=state.open.has(id);
+    const tm=trendMeta[g.utr];
+    const playerRows=g.ps.map(p=>`<div class="row prow" style="grid-template-columns:${cfg.grid}">${cfg.cols.map(c=>cellHTML(p,c)).join("")}</div>`).join("");
+    const notes=g.ps.map(p=>`<p><span class="k note-k">${p.role} · ${p.p}</span>${p.nt}</p>`).join("");
+    return`<div class="item${open?' open':''}">
+      <div class="row data grow" data-id="${id}">
+        <div class="cell rank c-rank">${g.r}</div>
+        <div class="cell team c-team"><span class="chip" style="background:${col}"></span><span style="min-width:0"><span class="tname">${nm}</span><span class="tabbr">${dv}</span></span></div>
+        <div class="cell c-utr"><span class="trend" style="color:${tm.color}">${tm.arrow} ${tm.label}</span></div>
+        <div class="cell c-proj"><span class="projcell"><span class="psub" style="margin:0 2px 0 0">UNIT</span><span class="grade" style="color:${gcol(g.upj)}">${g.upj}</span></span></div>
+      </div>
+      <div class="pgroup">${playerRows}</div>
+      <div class="detail"><div class="risk">${notes}</div></div>
+    </div>`;
+  }).join("");
+}
+function renderTabs(){
+  document.getElementById('tabs').innerHTML=Object.entries(TABS).map(([k,c])=>`<button class="tab${state.tab===k?' active':''}" data-tab="${k}">${c.name}</button>`).join("");
+}
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab');if(!b)return;
+  state.tab=b.dataset.tab;state.sort="r";state.dir=1;state.open.clear();
+  renderTabs();render();
+});
+headEl.addEventListener('click',e=>{
+  const c=e.target.closest('.cell');if(!c||!c.dataset.key)return;
+  const key=c.dataset.key,type=c.dataset.type,cfg=TABS[state.tab];
+  if(cfg.group){ if(state.sort==="pj")state.dir*=-1; else{state.sort="pj";state.dir=-1;} render();return; }
+  if(state.sort===key)state.dir*=-1;
+  else{state.sort=key;state.dir=(type==="rank"||type==="team"||type==="tmini"||type==="player"||type==="num"||type==="arch")?1:-1;}
+  render();
+});
+rowsEl.addEventListener('click',e=>{
+  const r=e.target.closest('.row.data');if(!r)return;
+  const id=r.dataset.id;
+  if(state.open.has(id))state.open.delete(id);else state.open.add(id);
+  render();
+});
+document.getElementById('q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();render();});
+document.getElementById('conf').addEventListener('change',e=>{state.conf=e.target.value;render();});
+document.getElementById('div').addEventListener('change',e=>{state.div=e.target.value;render();});
+document.getElementById('trend').addEventListener('change',e=>{state.trend=e.target.value;render();});
+document.getElementById('reset').addEventListener('click',()=>{
+  state.q="";state.conf="";state.div="";state.trend="";state.sort="r";state.dir=1;state.open.clear();
+  document.getElementById('q').value="";document.getElementById('conf').value="";
+  document.getElementById('div').value="";document.getElementById('trend').value="";
+  render();
+});
+document.getElementById('srcgrid').innerHTML=SOURCES.map(([tag,name,desc,url,host])=>
+  `<a class="src" href="${url}" target="_blank" rel="noopener"><span class="src-tag">${tag}</span><span class="src-name">${name}</span><span class="src-desc">${desc}</span><span class="src-url">${host} ↗</span></a>`).join("");
+renderTabs();render();
+
+</script>
+</body>
+</html>

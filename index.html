@@ -342,9 +342,51 @@
     margin: 0 8px;
   }
   .site-footer a:hover { color: var(--accent); }
+  /* ===== SITE NAV (tabs) ===== */
+  .site-nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(15,23,42,.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site-nav-inner {
+    max-width: 1700px; margin: 0 auto;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 20px; flex-wrap: wrap;
+  }
+  .site-brand {
+    font-weight: 700; font-size: 15px; color: var(--text);
+    padding: 12px 0; white-space: nowrap;
+  }
+  .site-brand .accent { color: var(--accent); }
+  .site-tabs { display: flex; gap: 4px; }
+  .site-tab {
+    background: none; color: var(--muted);
+    border: 0; border-bottom: 3px solid transparent;
+    border-radius: 0; padding: 14px 16px 11px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .site-tab:hover:not(:disabled) { background: none; color: var(--text); }
+  .site-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  #tab-trenches { display: none; }
+  #tab-trenches iframe { display: block; width: 100%; height: calc(100vh - 50px); border: 0; }
+  body.tab-trenches .screen { display: none !important; }
+  body.tab-trenches #tab-trenches { display: block; }
 </style>
 </head>
 <body>
+
+<div class="site-nav">
+  <div class="site-nav-inner">
+    <span class="site-brand"><span class="accent">&#127944;</span> Auction Draft HQ</span>
+    <div class="site-tabs">
+      <button class="site-tab active" data-tab="sim" onclick="showTab('sim')">Draft Simulator</button>
+      <button class="site-tab" data-tab="trenches" onclick="showTab('trenches')">The Trenches</button>
+    </div>
+  </div>
+</div>
 
 <!-- ========== SETUP SCREEN ========== -->
 <div id="screen-setup" class="screen active">
@@ -582,6 +624,11 @@
   </div>
   <div id="results-summary" style="color: var(--muted); margin-bottom: 14px"></div>
   <div class="results-grid" id="results-grid"></div>
+</div>
+
+<!-- ========== THE TRENCHES (projection hub) ========== -->
+<div id="tab-trenches">
+  <iframe id="trenches-frame" title="The Trenches — Positional Projection Hub" data-src="trenches.html"></iframe>
 </div>
 
 <div id="toast-container"></div>
@@ -2033,6 +2080,21 @@ async function submitToFirestore(records, budget) {
     await batch.commit();
   } catch (e) {
     console.warn('Firestore write failed — prices not shared this draft.', e);
+  }
+}
+</script>
+
+<script>
+/* Top-level tab switching between the simulator and The Trenches hub */
+function showTab(name){
+  document.body.classList.toggle('tab-trenches', name === 'trenches');
+  document.querySelectorAll('.site-tab').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  if(name === 'trenches'){
+    var f = document.getElementById('trenches-frame');
+    if(f && !f.src && f.dataset.src){ f.src = f.dataset.src; } // lazy-load on first open
+    window.scrollTo(0, 0);
   }
 }
 </script>
