@@ -189,8 +189,15 @@
   .metric-toggle button:last-child{border-right:none;}
   .metric-toggle button.active{background:var(--rb);color:#0f172a;}
   .empty-state{color:var(--chalk-dim);font-size:13.5px;padding:30px 0;text-align:center;}
-  .compare-table-wrap{overflow-x:auto;margin-top:20px;}
+  .compare-table-wrap{overflow-x:auto;margin-top:12px;}
+  .compare-table-wrap.collapsed{display:none;}
   .compare-table-wrap table{min-width:520px;}
+  .table-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;padding-top:14px;border-top:1px solid var(--line-strong);}
+  .table-toggle-label{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--chalk-dim);font-weight:600;}
+  .table-toggle-btn{background:none;border:1px solid var(--line-strong);color:var(--chalk-dim);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:6px 11px;cursor:pointer;display:flex;align-items:center;gap:7px;}
+  .table-toggle-btn:hover{color:var(--chalk);border-color:var(--wr);}
+  .table-toggle-btn .chev{font-size:9px;transition:transform .15s;}
+  .table-toggle-btn.collapsed .chev{transform:rotate(-90deg);}
   .player-head{display:flex;align-items:center;gap:7px;}
 </style>
 </head>
@@ -226,7 +233,11 @@
       <div id="compareEmpty" class="empty-state" style="display:none;">Add a player above to see their trend.</div>
       <div class="chart-box" id="compareChartWrap"><canvas id="compareChart"></canvas></div>
 
-      <div class="compare-table-wrap">
+      <div class="table-toggle-row" id="tableToggleRow" style="display:none;">
+        <span class="table-toggle-label">Season-by-season stats</span>
+        <button class="table-toggle-btn" id="tableToggleBtn" onclick="toggleCompareTable()" aria-expanded="true">Minimize<span class="chev">&#9662;</span></button>
+      </div>
+      <div class="compare-table-wrap" id="compareTableWrap">
         <table id="compareTable"></table>
       </div>
     </div>
@@ -570,6 +581,7 @@ function renderCompare(){
     empty.style.display = 'block';
     chartWrap.style.display = 'none';
     compareTable.innerHTML = '';
+    document.getElementById('tableToggleRow').style.display = 'none';
     return;
   }
   empty.style.display = 'none';
@@ -669,6 +681,24 @@ function renderCompare(){
 
   html += '</tbody>';
   compareTable.innerHTML = html;
+
+  document.getElementById('tableToggleRow').style.display = 'flex';
+  applyTableCollapse();
+}
+
+let tableCollapsed = false;
+function toggleCompareTable(){
+  tableCollapsed = !tableCollapsed;
+  applyTableCollapse();
+}
+function applyTableCollapse(){
+  const wrap = document.getElementById('compareTableWrap');
+  const btn = document.getElementById('tableToggleBtn');
+  if(!wrap || !btn) return;
+  wrap.classList.toggle('collapsed', tableCollapsed);
+  btn.classList.toggle('collapsed', tableCollapsed);
+  btn.setAttribute('aria-expanded', String(!tableCollapsed));
+  btn.firstChild.textContent = tableCollapsed ? 'Expand' : 'Minimize';
 }
 
 // seed with a default comparison
