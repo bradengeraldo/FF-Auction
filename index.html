@@ -260,19 +260,27 @@
   }
   .tn-wrap summary { font-size: 13px; }
   .tn-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 10px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin-top: 10px;
   }
-  @media (max-width: 560px) { .tn-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .tn-grid { grid-template-columns: 1fr; } }
   .tn-row { display: flex; align-items: center; gap: 6px; }
   .tn-row .tn-num {
     color: var(--muted); font-size: 12px; width: 20px; text-align: right; flex: none;
   }
-  .tn-row input {
-    flex: 1; min-width: 0; padding: 4px 8px; font-size: 13px;
+  .tn-row input[type="text"] {
+    flex: 1 1 auto; min-width: 0; padding: 4px 8px; font-size: 13px;
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; color: var(--text);
   }
-  .tn-row input:focus { outline: none; border-color: var(--accent); }
+  .tn-row input:focus, .tn-row select:focus { outline: none; border-color: var(--accent); }
   .tn-row.tn-you input { border-color: var(--user); }
+  .tn-row .tn-profile {
+    flex: 0 0 116px; width: 116px; padding: 4px 6px; font-size: 12px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; color: var(--text);
+  }
+  .tn-row .tn-you-tag {
+    flex: 0 0 116px; width: 116px; font-size: 11px; color: var(--muted);
+    text-align: center; font-style: italic;
+  }
 
   /* Teams panel */
   .team-card {
@@ -832,6 +840,7 @@ const state = {
   keepers: [],                     // {teamIndex, name, pos, price}
   keeperCount: 0,
   plannedCpuNames: null,           // fixed CPU names so the keeper UI matches the draft
+  plannedStrategies: [],           // per-team profile tokens ('' / undefined = random)
   log: []
 };
 
@@ -1120,6 +1129,42 @@ const POS_VARIANT_LABEL = {
   zeroRB: 'Zero-RB', heroRB: 'Hero-RB', topQB: 'Top-QB', topTE: 'Top-TE', topWR: 'Top-WR'
 };
 
+/* Profile choices the user can assign to a team on setup. '' = leave random.
+   Positional variants are exposed directly (token 'pos:<variant>'). */
+const STRATEGY_OPTIONS = [
+  { value: '', label: 'Random' },
+  { value: 'starsAndScrubs', label: 'Stars & Scrubs' },
+  { value: 'balanced', label: 'Balanced Build' },
+  { value: 'valueShopper', label: 'Value Shopper' },
+  { value: 'pos:zeroRB', label: 'Zero-RB' },
+  { value: 'pos:heroRB', label: 'Hero-RB' },
+  { value: 'pos:topQB', label: 'Top-QB' },
+  { value: 'pos:topTE', label: 'Top-TE' },
+  { value: 'pos:topWR', label: 'Top-WR' },
+  { value: 'random', label: 'Wild Card' }
+];
+const STRATEGY_TOKENS = new Set(STRATEGY_OPTIONS.map(o => o.value).filter(Boolean));
+
+/* Apply a profile token to a team. Handles 'pos:<variant>', a bare strategy
+   key, or 'positional' (random variant). Returns true if applied. */
+function applyStrategyToken(team, token) {
+  let key = token, variant = null;
+  if (typeof token === 'string' && token.startsWith('pos:')) { key = 'positional'; variant = token.slice(4); }
+  const strat = STRATEGIES[key];
+  if (!strat) return false;
+  team.strategy = strat;
+  if (key === 'positional') {
+    team.posVariant = (variant && POS_VARIANT_LABEL[variant])
+      ? variant
+      : POS_VARIANTS[Math.floor(Math.random() * POS_VARIANTS.length)];
+    team.strategyLabel = POS_VARIANT_LABEL[team.posVariant];
+  } else {
+    team.posVariant = null;
+    team.strategyLabel = strat.label;
+  }
+  return true;
+}
+
 const STRATEGIES = {
   starsAndScrubs: {
     key: 'starsAndScrubs',
@@ -1189,23 +1234,24 @@ const STRATEGIES = {
 };
 
 function assignStrategies(teams) {
-  const cpus = teams.filter(t => !t.isUser);
-  const keys = Object.keys(STRATEGIES);
-  const pool = keys.slice(0, cpus.length);                  // seed one of each (capped at #cpus)
-  while (pool.length < cpus.length) {
-    pool.push(keys[Math.floor(Math.random() * keys.length)]);
-  }
-  shuffle(pool);
-  cpus.forEach((t, i) => {
-    const key = pool[i];
-    t.strategy = STRATEGIES[key];
-    if (key === 'positional') {
-      t.posVariant = POS_VARIANTS[Math.floor(Math.random() * POS_VARIANTS.length)];
-      t.strategyLabel = POS_VARIANT_LABEL[t.posVariant];
-    } else {
-      t.strategyLabel = t.strategy.label;
-    }
+  const chosen = state.plannedStrategies || [];
+  // 1) Honor any profile the user explicitly picked (by team index).
+  teams.forEach((t, idx) => {
+    if (t.isUser) return;
+    const tok = chosen[idx];
+    if (tok) applyStrategyToken(t, tok);
   });
+  // 2) Randomly assign the rest, seeding one of each profile for variety.
+  const unset = teams.filter(t => !t.isUser && !t.strategy);
+  if (unset.length) {
+    const keys = Object.keys(STRATEGIES);
+    const pool = keys.slice(0, unset.length);
+    while (pool.length < unset.length) {
+      pool.push(keys[Math.floor(Math.random() * keys.length)]);
+    }
+    shuffle(pool);
+    unset.forEach((t, i) => applyStrategyToken(t, pool[i]));
+  }
 }
 
 /* ============================================================
@@ -2242,10 +2288,16 @@ function initKeeperUI() {
   // setup "Team name" field. Updates dropdown + keeper labels without
   // re-rendering the grid (so focus isn't lost mid-type).
   const tnGrid = $('#tn-grid');
-  if (tnGrid) tnGrid.addEventListener('input', (e) => {
-    const inp = e.target.closest('.tn-row input[data-idx]');
-    if (inp) setTeamName(parseInt(inp.dataset.idx, 10), inp.value, { fromGrid: true });
-  });
+  if (tnGrid) {
+    tnGrid.addEventListener('input', (e) => {
+      const inp = e.target.closest('.tn-row input[data-idx]');
+      if (inp) setTeamName(parseInt(inp.dataset.idx, 10), inp.value, { fromGrid: true });
+    });
+    tnGrid.addEventListener('change', (e) => {
+      const sel = e.target.closest('.tn-profile[data-sidx]');
+      if (sel) setTeamStrategy(parseInt(sel.dataset.sidx, 10), sel.value);
+    });
+  }
   const tnReset = $('#tn-reset');
   if (tnReset) tnReset.addEventListener('click', resetTeamNames);
 
@@ -2302,13 +2354,34 @@ function renderTeamNamesEditor() {
   const grid = $('#tn-grid');
   if (!grid) return;
   ensurePlannedTeams();
-  grid.innerHTML = Array.from({ length: NUM_TEAMS }, (_, i) =>
-    `<div class="tn-row${i === 0 ? ' tn-you' : ''}">
+  const strat = state.plannedStrategies || [];
+  grid.innerHTML = Array.from({ length: NUM_TEAMS }, (_, i) => {
+    const nameInput = `<input type="text" maxlength="32" data-idx="${i}" value="${escapeHtml(teamNameForIndex(i))}"
+              placeholder="${i === 0 ? 'Your team' : 'Team ' + (i + 1)}">`;
+    let profile;
+    if (i === 0) {
+      profile = `<span class="tn-you-tag">you control</span>`;
+    } else {
+      const sel = strat[i] || '';
+      profile = `<select class="tn-profile" data-sidx="${i}" title="Draft profile — leave Random to keep it hidden">` +
+        STRATEGY_OPTIONS.map(o =>
+          `<option value="${o.value}"${o.value === sel ? ' selected' : ''}>${o.label}</option>`
+        ).join('') + `</select>`;
+    }
+    return `<div class="tn-row${i === 0 ? ' tn-you' : ''}">
        <span class="tn-num">${i === 0 ? 'You' : (i + 1)}</span>
-       <input type="text" maxlength="32" data-idx="${i}" value="${escapeHtml(teamNameForIndex(i))}"
-              placeholder="${i === 0 ? 'Your team' : 'Team ' + (i + 1)}">
-     </div>`
-  ).join('');
+       ${nameInput}
+       ${profile}
+     </div>`;
+  }).join('');
+}
+
+/* Store a team's chosen draft profile ('' = random). */
+function setTeamStrategy(idx, token) {
+  if (idx <= 0 || idx >= NUM_TEAMS) return;
+  if (!state.plannedStrategies) state.plannedStrategies = [];
+  state.plannedStrategies[idx] = (token && STRATEGY_TOKENS.has(token)) ? token : '';
+  persistTeamNames();
 }
 
 /* Update a team's name. opts.fromGrid / opts.fromField avoid clobbering the
@@ -2332,21 +2405,23 @@ function setTeamName(idx, rawName, opts = {}) {
 }
 
 function resetTeamNames() {
-  if (!confirm('Reset all team names? Your team name and keepers are kept; opponent names go back to the random defaults.')) return;
+  if (!confirm('Reset teams? Your team name and keepers are kept; opponent names return to random defaults and all profiles go back to Random.')) return;
   state.plannedCpuNames = shuffle(CPU_TEAM_NAMES).slice(0, NUM_TEAMS - 1);
+  state.plannedStrategies = [];
   lsSet(TEAM_NAMES_KEY, '');   // clear saved override
   persistTeamNames();          // re-save current (user name + fresh cpu names)
   renderTeamNamesEditor();
   populateKeeperTeamDropdown();
   renderKeeperList();
-  toast('Opponent names reset.');
+  toast('Opponent names and profiles reset.');
 }
 
 function persistTeamNames() {
   ensurePlannedTeams();
   lsSet(TEAM_NAMES_KEY, JSON.stringify({
     user: state.userTeamName || '',
-    cpu: state.plannedCpuNames
+    cpu: state.plannedCpuNames,
+    strategies: state.plannedStrategies || []
   }));
 }
 
@@ -2358,6 +2433,10 @@ function loadTeamNames() {
   if (!data || typeof data !== 'object') return;
   if (Array.isArray(data.cpu) && data.cpu.length === NUM_TEAMS - 1) {
     state.plannedCpuNames = data.cpu.map(n => String(n || ''));
+  }
+  if (Array.isArray(data.strategies)) {
+    state.plannedStrategies = data.strategies.map(t =>
+      (t && STRATEGY_TOKENS.has(t)) ? t : '');
   }
   if (typeof data.user === 'string' && data.user.trim()) {
     state.userTeamName = data.user;
