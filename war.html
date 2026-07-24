@@ -199,16 +199,28 @@
   .table-toggle-btn .chev{font-size:9px;transition:transform .15s;}
   .table-toggle-btn.collapsed .chev{transform:rotate(-90deg);}
   .player-head{display:flex;align-items:center;gap:7px;}
+  .defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);}
+  .def{background:var(--bg);padding:16px 18px;}
+  .def .term{font-weight:700;font-size:13px;color:var(--chalk);letter-spacing:.02em;margin-bottom:6px;}
+  .def .desc{font-size:12.5px;color:var(--chalk-dim);line-height:1.55;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <header>
-    <p class="eyebrow">msuffl · fantasy WAR — half-PPR · 2018–2025</p>
-    <h1>Draft capital buys<br>fewer <span>losses</span>, not more <span>wins</span></h1>
-    <p class="sub">Round-1 WR and RB backs post nearly identical win and loss rates. What actually separates them is durability — early-round backs lose almost twice the WAR to missed games.</p>
-  </header>
+  <section style="padding-top:44px;">
+    <div class="section-head">
+      <h2>Metric definitions</h2>
+      <p class="section-note">Half-PPR scoring, 2018–2025. Win/Loss thresholds are set per position.</p>
+    </div>
+    <div class="defs">
+      <div class="def"><div class="term">Win %</div><div class="desc">Share of a player's games that clear the positional <em>win</em> line — weekly finishes strong enough to win you the position.</div></div>
+      <div class="def"><div class="term">Loss %</div><div class="desc">Share of games at or below the positional <em>loss</em> line — weekly duds that actively cost your lineup.</div></div>
+      <div class="def"><div class="term">WAR</div><div class="desc">Wins Above Replacement — fantasy value produced over a freely-available replacement at the position, expressed on a wins scale.</div></div>
+      <div class="def"><div class="term">WAR (Dur.)</div><div class="desc">Durability-adjusted WAR — the same value charged for games missed, so availability is built into the number.</div></div>
+      <div class="def"><div class="term">PPG</div><div class="desc">Points per game — half-PPR fantasy points averaged across games the player actually played.</div></div>
+    </div>
+  </section>
 
   <section>
     <div class="section-head">
@@ -242,6 +254,12 @@
       </div>
     </div>
   </section>
+
+  <header>
+    <p class="eyebrow">msuffl · fantasy WAR — half-PPR · 2018–2025</p>
+    <h1>Draft capital buys<br>fewer <span>losses</span>, not more <span>wins</span></h1>
+    <p class="sub">Round-1 WR and RB backs post nearly identical win and loss rates. What actually separates them is durability — early-round backs lose almost twice the WAR to missed games.</p>
+  </header>
 
   <div class="callouts" id="callouts"></div>
 
