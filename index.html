@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fantasy Football Auction Draft Simulator</title>
+<meta name="description" content="Practice auction-style fantasy football drafts against 12 smart CPU GMs. Set keepers, manage a $200 budget, and share your roster.">
+<link rel="canonical" href="https://ff-auction.com/">
+<!-- Open Graph / social share preview -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Auction Draft HQ">
+<meta property="og:title" content="Fantasy Football Auction Draft Simulator">
+<meta property="og:description" content="Build a fantasy roster in a live $200 auction draft, set your keepers, then share your team. Think you can draft better?">
+<meta property="og:url" content="https://ff-auction.com/">
+<meta property="og:image" content="https://ff-auction.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fantasy Football Auction Draft Simulator">
+<meta name="twitter:description" content="Build a fantasy roster in a live $200 auction draft, set your keepers, then share your team. Think you can draft better?">
+<meta name="twitter:image" content="https://ff-auction.com/og-image.png">
 <style>
   :root {
     --bg: #0f172a;
@@ -174,7 +187,7 @@
   }
   .player-row {
     display: grid;
-    grid-template-columns: 1fr 60px 70px;
+    grid-template-columns: 1fr 50px 52px 70px;
     gap: 8px;
     align-items: center;
     padding: 8px 10px;
@@ -184,9 +197,82 @@
   .player-row:hover { background: var(--panel); }
   .player-row .pos { font-weight: 700; color: var(--accent); }
   .player-row .val { color: var(--good); text-align: right; font-variant-numeric: tabular-nums; }
+  .player-row .val small { color: var(--muted); }
   .player-row button { padding: 4px 8px; font-size: 12px; }
   .player-row.disabled { opacity: 0.45; }
   .player-row.disabled button { display: none; }
+
+  /* Keeper setup UI */
+  .keeper-search-results {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .keeper-search-results:empty { display: none; }
+  .keeper-opt {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .keeper-opt:last-child { border-bottom: none; }
+  .keeper-opt:hover { background: var(--panel); }
+  .keeper-opt .pos { font-weight: 700; color: var(--accent); font-size: 12px; }
+  .keeper-opt .hint { color: var(--muted); font-size: 12px; }
+  .keeper-list { margin-top: 12px; }
+  .keeper-team-group { margin-bottom: 10px; }
+  .keeper-team-group h4 {
+    margin: 0 0 4px; font-size: 13px; color: var(--text);
+    border-bottom: 1px solid var(--border); padding-bottom: 3px;
+  }
+  .keeper-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 0; font-size: 13px;
+  }
+  .keeper-item .kp-name { flex: 1; }
+  .keeper-item .kp-price { color: var(--good); font-variant-numeric: tabular-nums; }
+  .keeper-item .kp-edit {
+    width: 52px; padding: 2px 4px; margin-left: 2px; font-size: 13px;
+    color: var(--good); background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 4px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .keeper-item .kp-edit:focus { outline: none; border-color: var(--accent); }
+  .keeper-item .kp-remove {
+    background: none; border: none; color: var(--bad);
+    cursor: pointer; font-size: 15px; padding: 0 4px; line-height: 1;
+  }
+  .keeper-empty { color: var(--muted); font-size: 13px; font-style: italic; }
+  .keeper-presets {
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .keeper-presets .kp-preset-label { font-size: 13px; margin-bottom: 8px; }
+  .keeper-presets .row { margin-top: 6px; gap: 6px; }
+  .keeper-presets button.secondary { padding: 6px 10px; font-size: 13px; }
+  .keeper-presets.no-presets #keeper-preset-loadrow { display: none; }
+  .tn-wrap {
+    margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .tn-wrap summary { font-size: 13px; }
+  .tn-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 10px;
+  }
+  @media (max-width: 560px) { .tn-grid { grid-template-columns: 1fr; } }
+  .tn-row { display: flex; align-items: center; gap: 6px; }
+  .tn-row .tn-num {
+    color: var(--muted); font-size: 12px; width: 20px; text-align: right; flex: none;
+  }
+  .tn-row input {
+    flex: 1; min-width: 0; padding: 4px 8px; font-size: 13px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; color: var(--text);
+  }
+  .tn-row input:focus { outline: none; border-color: var(--accent); }
+  .tn-row.tn-you input { border-color: var(--user); }
 
   /* Teams panel */
   .team-card {
@@ -254,7 +340,18 @@
   .result-team table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .result-team td { padding: 3px 4px; border-bottom: 1px solid var(--border); }
   .result-team td.price { text-align: right; color: var(--good); }
-  .results-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+  .results-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; align-items: center; }
+  .share-btn {
+    border: none; color: #fff; font-weight: 600; cursor: pointer;
+    padding: 8px 14px; border-radius: 6px; font-size: 14px;
+  }
+  .share-btn:hover { filter: brightness(1.1); }
+  .share-x  { background: #000; }
+  .share-fb { background: #1877f2; }
+  .share-rd { background: #ff4500; }
+  .share-wa { background: #25d366; }
+  .share-cp { background: var(--panel-2); }
+  #share-native-btn { font-weight: 600; }
 
   /* Toast */
   .toast {
@@ -401,10 +498,6 @@
       <label>Team name</label>
       <input id="user-team-name" type="text" value="Your Team" maxlength="32" style="flex:1; max-width:340px">
     </div>
-    <div class="row">
-      <label>Your email (for results)</label>
-      <input id="user-email" type="email" placeholder="you@example.com" style="flex:1; max-width:340px">
-    </div>
   </div>
 
   <div class="card">
@@ -418,6 +511,47 @@
     <div class="row" style="color: var(--muted); font-size: 13px">
       <span><strong style="color: var(--text)">Bench (7):</strong> 7 spots</span>
     </div>
+  </div>
+
+  <div class="card">
+    <details class="accordion" id="keeper-card">
+      <summary style="cursor:pointer"><h3 style="display:inline">Keepers <span style="color:var(--muted); font-weight:400; font-size:13px">— optional, for keeper/dynasty leagues</span></h3></summary>
+      <div class="accordion-body">
+        <p style="color:var(--muted); font-size:13px; margin:6px 0 12px">
+          Assign kept players to any team at the price they'll count against that team's $200 budget.
+          Kept players are removed from the draft pool, and the remaining player values shift with the new supply and demand.
+        </p>
+
+        <details class="tn-wrap" id="team-names-wrap">
+          <summary style="cursor:pointer">Team names <span style="color:var(--muted); font-weight:400; font-size:13px">— rename teams to match your league</span></summary>
+          <div class="tn-grid" id="tn-grid"></div>
+          <button type="button" id="tn-reset" class="secondary" style="margin-top:8px">Reset to default names</button>
+        </details>
+
+        <div class="keeper-form">
+          <div class="row">
+            <select id="keeper-team" style="flex:1; min-width:150px"></select>
+            <input id="keeper-price" type="number" min="1" max="199" placeholder="$" style="width:70px">
+          </div>
+          <input id="keeper-search" type="text" placeholder="Search a player to keep…" style="width:100%; margin-top:6px" autocomplete="off">
+          <div id="keeper-search-results" class="keeper-search-results"></div>
+        </div>
+        <div id="keeper-list" class="keeper-list"></div>
+
+        <div id="keeper-presets" class="keeper-presets">
+          <div class="kp-preset-label">Saved keeper sets <span style="color:var(--muted); font-weight:400">— your current keepers are remembered automatically</span></div>
+          <div class="row">
+            <input id="keeper-preset-name" type="text" placeholder="Name this set…" maxlength="40" style="flex:1; min-width:140px" autocomplete="off">
+            <button type="button" id="keeper-preset-save" class="secondary">Save set</button>
+          </div>
+          <div class="row" id="keeper-preset-loadrow">
+            <select id="keeper-preset-select" style="flex:1; min-width:140px"></select>
+            <button type="button" id="keeper-preset-load" class="secondary">Load</button>
+            <button type="button" id="keeper-preset-delete" class="secondary">Delete</button>
+          </div>
+        </div>
+      </div>
+    </details>
   </div>
 
   <button id="start-draft-btn" style="font-size:16px; padding: 12px 24px">Start Draft</button>
@@ -620,7 +754,12 @@
 <div id="screen-results" class="screen">
   <h1>Draft Results</h1>
   <div class="results-actions">
-    <button id="email-results-btn">Email Results</button>
+    <button id="share-native-btn" style="display:none">Share Results</button>
+    <button class="share-btn share-x" data-net="x" title="Share on X">Share on X</button>
+    <button class="share-btn share-fb" data-net="facebook" title="Share on Facebook">Facebook</button>
+    <button class="share-btn share-rd" data-net="reddit" title="Share on Reddit">Reddit</button>
+    <button class="share-btn share-wa" data-net="whatsapp" title="Share on WhatsApp">WhatsApp</button>
+    <button class="share-btn share-cp" data-net="copy" title="Copy shareable text">Copy</button>
     <button class="secondary" id="csv-download-btn">Download CSV</button>
     <button class="secondary" id="new-draft-btn">New Draft</button>
   </div>
@@ -690,6 +829,9 @@ const state = {
   paused: false,
   drafting: false,
   openTeamModal: null,             // team index whose roster modal is open, or null
+  keepers: [],                     // {teamIndex, name, pos, price}
+  keeperCount: 0,
+  plannedCpuNames: null,           // fixed CPU names so the keeper UI matches the draft
   log: []
 };
 
@@ -768,12 +910,12 @@ async function initDraft() {
   // Rank players by value so strategy profiles can tell elites from filler
   attachOverallRanks(state.players);
 
-  // build 12 teams (user is index 0)
+  // build 12 teams (user is index 0). Names are fixed at setup (and editable in
+  // the keeper card) so the keeper UI and the live draft agree on who's who.
+  ensurePlannedTeams();
   state.teams = [];
-  state.teams.push(buildTeam(state.userTeamName || 'Your Team', true));
-  const cpuNames = shuffle(CPU_TEAM_NAMES).slice(0, NUM_TEAMS - 1);
-  for (let i = 0; i < NUM_TEAMS - 1; i++) {
-    state.teams.push(buildTeam(cpuNames[i], false));
+  for (let i = 0; i < NUM_TEAMS; i++) {
+    state.teams.push(buildTeam(teamNameForIndex(i), i === 0));
   }
   state.userTeamIndex = 0;
 
@@ -781,6 +923,10 @@ async function initDraft() {
   // Profiles are intentionally NOT logged or shown in the UI so the user
   // has to read each team's behavior rather than being told their plan.
   assignStrategies(state.teams);
+
+  // Apply keepers BEFORE the draft opens: kept players leave the pool, cost
+  // their team real budget, and reshape supply/demand for everyone else.
+  applyKeepers();
 
   // shuffle nomination order (fixed for entire draft per spec)
   const indices = Array.from({ length: NUM_TEAMS }, (_, i) => i);
@@ -803,6 +949,112 @@ function buildTeam(name, isUser) {
     posVariant: null,           // sub-variant for the "positional" profile
     strategyLabel: isUser ? 'You' : ''
   };
+}
+
+/* Fix the CPU team names once, so the keeper setup UI and the live draft
+   reference the same opponents. Regenerated only if not yet set. */
+function ensurePlannedTeams() {
+  if (!state.plannedCpuNames) {
+    state.plannedCpuNames = shuffle(CPU_TEAM_NAMES).slice(0, NUM_TEAMS - 1);
+  }
+  return state.plannedCpuNames;
+}
+
+/* Raw name for a team slot (0 = the user's team), with a sensible fallback
+   when a field has been cleared. */
+function teamNameForIndex(idx) {
+  if (idx === 0) {
+    const n = (state.userTeamName || $('#user-team-name')?.value || '').trim();
+    return n || 'Your Team';
+  }
+  const names = ensurePlannedTeams();
+  return (names[idx - 1] || '').trim() || `Team ${idx + 1}`;
+}
+
+/* Label for a team slot in the keeper UI dropdown (0 gets a "(You)" tag). */
+function teamLabelForIndex(idx) {
+  return idx === 0 ? teamNameForIndex(0) + ' (You)' : teamNameForIndex(idx);
+}
+
+/* ---------- Keepers ---------- */
+/* Assign every configured keeper to its team before the draft opens:
+   remove the player from the pool, charge the team's budget, and fill the
+   roster slot. Then re-price the remaining pool for the new supply/demand. */
+function applyKeepers() {
+  state.keeperCount = 0;
+  const kept = [];
+  (state.keepers || []).forEach(k => {
+    const team = state.teams[k.teamIndex];
+    const player = state.players.find(p => !p.drafted && p.name === k.name);
+    if (!team || !player) return;
+    if (!canRosterPos(team, player.pos)) return;       // respect positional caps
+    const price = Math.max(1, Math.round(k.price));
+    player.drafted = true;
+    player.finalPrice = price;
+    player.winningTeam = k.teamIndex;
+    player.isKeeper = true;
+    team.budget = Math.max(0, team.budget - price);
+    team.roster.push({ player, price, slot: assignSlot(team, player), keeper: true });
+    team.posCount[player.pos]++;
+    state.keeperCount++;
+    kept.push({ team, player, price });
+  });
+
+  if (kept.length) {
+    applyKeeperScarcity();
+    logEntry(`${kept.length} keeper(s) locked in before the draft.`, 'system');
+    kept
+      .sort((a, b) => b.price - a.price)
+      .forEach(k => logEntry(`Keeper: ${k.team.name} keeps ${k.player.name} (${k.player.posRank}) at ${fmt$(k.price)}`, 'nom'));
+  }
+}
+
+/* Positional supply/demand re-pricing after keepers.
+   The global market factor (money left ÷ value left) already handles overall
+   inflation. This layer captures POSITION scarcity: if keepers strip the top
+   of a position but leave the league's demand for it, the survivors get
+   pricier; if teams kept their studs and no longer need the position, it
+   softens. Multiplier is capped so ordering never inverts wildly. */
+function applyKeeperScarcity() {
+  const starterReq = { QB: 1, RB: 2, WR: 2, TE: 1, DST: 1, K: 1 };
+  POSITIONS.forEach(pos => {
+    const req = starterReq[pos] || 1;
+    // "Relevant" supply = the startable tier at this position (starters +
+    // comparable depth), so hundreds of deep scrubs don't wash out the signal.
+    const tierSize = Math.max(NUM_TEAMS, NUM_TEAMS * req * 2);
+    const tier = state.players
+      .filter(p => p.pos === pos)
+      .sort((a, b) => b.baseValue - a.baseValue)
+      .slice(0, tierSize);
+    if (!tier.length) return;
+
+    // Supply is measured by VALUE, not headcount: keeping a couple of elite
+    // backs strips far more value from the position than two roster spots
+    // suggests, which is exactly why the survivors get bid up. Deep scrubs
+    // (which keepers rarely are) barely move this number.
+    const baseSupply = tier.reduce((s, p) => s + p.baseValue, 0);
+    const remainSupply = tier.reduce((s, p) => s + (p.drafted ? 0 : p.baseValue), 0);
+    if (baseSupply <= 0) return;
+
+    // Demand is the share of league-wide starter slots still open at this pos —
+    // keepers that fill a slot reduce it.
+    const baseDemand = NUM_TEAMS * req;
+    const openDemand = state.teams.reduce((s, t) => s + Math.max(0, req - t.posCount[pos]), 0);
+
+    const supplyRatio = remainSupply / baseSupply;                 // 1 = untouched
+    const demandRatio = openDemand / Math.max(1, baseDemand);      // 1 = untouched
+    let factor = demandRatio / Math.max(0.15, supplyRatio);
+    factor = Math.min(1.30, Math.max(0.75, factor));
+
+    state.players.forEach(p => {
+      if (p.pos === pos && !p.drafted) {
+        p.baseValue = +(p.baseValue * factor).toFixed(2);
+        p.keeperScarcity = factor;
+      }
+    });
+  });
+  // Ranks may shift after re-pricing
+  attachOverallRanks(state.players.filter(p => !p.drafted));
 }
 
 /* ---------- Roster / constraint helpers ---------- */
@@ -1033,7 +1285,8 @@ function buildValuations(player) {
   const eligible = state.teams.filter(t => canRosterPos(t, player.pos));
   const maxTeamBudget = Math.max(0, ...eligible.map(t => t.budget));
   // Draft progress in [0,1] — used by time-sensitive profiles (e.g. Value Shopper)
-  const ctx = { progress: Math.min(1, (state.pickNumber - 1) / (NUM_TEAMS * ROSTER_SIZE)) };
+  const totalAuctions = Math.max(1, NUM_TEAMS * ROSTER_SIZE - (state.keeperCount || 0));
+  const ctx = { progress: Math.min(1, (state.pickNumber - 1) / totalAuctions) };
   const valuations = state.teams.map(t => computeValuationForTeam(player, t, market, maxTeamBudget, ctx));
   return { valuations, marketFactor: market };
 }
@@ -1610,64 +1863,81 @@ function downloadCsv() {
   toast('CSV downloaded');
 }
 
-function buildEmailBody() {
-  const lines = [
-    `Fantasy Auction Draft Results — ${new Date().toLocaleDateString()}`,
-    `Your team: ${state.userTeamName}`,
-    ''
-  ];
-  for (const t of state.teams) {
-    lines.push(`=== ${t.name}${t.isUser ? ' (You)' : ''} — Spent $${BUDGET - t.budget}, Left $${t.budget} ===`);
-    for (const r of t.roster) {
-      lines.push(`  ${r.slot.padEnd(5)} ${r.player.name} (${r.player.posRank}, ${r.player.team}) - $${r.price}`);
-    }
-    lines.push('');
-  }
-  return lines.join('\n');
+/* ============================================================
+   SOCIAL SHARING
+   Turns the user's finished roster into a short, shareable brag and hands it
+   to the chosen network (or the device's native share sheet / clipboard).
+   ============================================================ */
+const SHARE_URL = 'https://ff-auction.com/';
+
+/* A concise summary of the user's team — headline picks + total spend. */
+function buildShareText() {
+  const t = state.teams[state.userTeamIndex] || state.teams[0];
+  const teamName = (state.userTeamName || 'my team').trim();
+  const top = (t ? t.roster.slice() : [])
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 3)
+    .map(r => `${r.player.name} ($${r.price})`);
+  const spent = t ? BUDGET - t.budget : 0;
+  let msg = `I built ${teamName} in a $200 fantasy football auction draft`;
+  if (top.length) msg += ` — headlined by ${top.join(', ')}`;
+  msg += `. Spent $${spent}/$${BUDGET}. Think you can draft a better roster?`;
+  return msg;
 }
 
-/* Real email delivery via FormSubmit (https://formsubmit.co — free, no signup).
-   The very first message to a given address triggers a one-time confirmation
-   email; once the user clicks the activation link, subsequent emails deliver
-   straight to their inbox. */
-async function emailResults() {
-  const email = (state.userEmail || '').trim();
-  if (!email) {
-    toast('No email set — add one on the setup screen and try again.');
+/* Compose the outbound URL for each network. */
+function shareNetworkUrl(net, text, url) {
+  const t = encodeURIComponent(text);
+  const u = encodeURIComponent(url);
+  switch (net) {
+    case 'x':
+      return `https://twitter.com/intent/tweet?text=${t}&url=${u}&hashtags=FantasyFootball,AuctionDraft`;
+    case 'facebook':
+      return `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}`;
+    case 'reddit':
+      return `https://www.reddit.com/submit?url=${u}&title=${encodeURIComponent(text.slice(0, 290))}`;
+    case 'whatsapp':
+      return `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`;
+    default:
+      return null;
+  }
+}
+
+async function shareResults(net) {
+  const text = buildShareText();
+  if (net === 'copy') {
+    const payload = `${text} ${SHARE_URL}`;
+    try {
+      await navigator.clipboard.writeText(payload);
+      toast('Copied — paste it anywhere ✓');
+    } catch (e) {
+      // Fallback for browsers without clipboard API / insecure context
+      const ta = document.createElement('textarea');
+      ta.value = payload;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast('Copied — paste it anywhere ✓'); }
+      catch (e2) { toast('Copy failed — select and copy manually.'); }
+      ta.remove();
+    }
     return;
   }
-  toast('Sending email…');
-  const body = buildEmailBody();
+  const shareUrl = shareNetworkUrl(net, text, SHARE_URL);
+  if (shareUrl) window.open(shareUrl, '_blank', 'noopener,noreferrer,width=600,height=520');
+}
+
+/* Native OS share sheet (mobile + some desktops). Best experience where
+   available; the per-network buttons remain as a fallback. */
+async function nativeShare() {
+  const text = buildShareText();
+  if (!navigator.share) { shareResults('copy'); return; }
   try {
-    const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        _subject: 'Your auction draft results',
-        _captcha: 'false',
-        _template: 'box',
-        team: state.userTeamName,
-        message: body
-      })
-    });
-    let json = {};
-    try { json = await res.json(); } catch (e) {}
-    if (res.ok && (json.success === 'true' || json.success === true)) {
-      toast(`Results emailed to ${email} ✓`);
-    } else if (json.message && /activate|confirm/i.test(json.message)) {
-      toast(`Activation email sent to ${email}. Click the link in your inbox, then press Email Results again.`);
-    } else {
-      toast(`Email failed (${res.status}). Falling back to mailto.`);
-      const href = `mailto:${email}?subject=${encodeURIComponent('Your auction draft results')}&body=${encodeURIComponent(body)}`;
-      window.open(href, '_blank');
-    }
+    await navigator.share({ title: 'Auction Draft HQ', text, url: SHARE_URL });
   } catch (e) {
-    toast(`Email error: ${e.message}. Opening mailto fallback.`);
-    const href = `mailto:${email}?subject=${encodeURIComponent('Your auction draft results')}&body=${encodeURIComponent(body)}`;
-    window.open(href, '_blank');
+    // User cancelled or share failed — no-op (they can still use a button)
   }
-  // Always download CSV alongside
-  downloadCsv();
 }
 
 /* ============================================================
@@ -1766,8 +2036,9 @@ function renderTeamModal() {
   const rows = MODAL_SLOT_ORDER.map(slot => {
     const r = t.roster.find(x => x.slot === slot);
     if (r) {
+      const kt = r.keeper ? ' <span style="color:var(--accent); font-size:11px; font-weight:700">KEEPER</span>' : '';
       return `<tr><td class="slot">${slot}</td>
-        <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank} · ${escapeHtml(r.player.team)}</span></td>
+        <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank} · ${escapeHtml(r.player.team)}</span>${kt}</td>
         <td class="price">$${r.price}</td></tr>`;
     }
     return `<tr class="empty"><td class="slot">${slot}</td><td>—</td><td class="price">—</td></tr>`;
@@ -1796,7 +2067,8 @@ function renderUserRoster() {
   tbody.innerHTML = allSlots.map(slot => {
     const r = user.roster.find(x => x.slot === slot);
     if (r) {
-      return `<tr><td class="slot">${slot}</td><td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span></td><td class="price">$${r.price}</td></tr>`;
+      const kt = r.keeper ? ' <span style="color:var(--accent); font-size:11px; font-weight:700">K</span>' : '';
+      return `<tr><td class="slot">${slot}</td><td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span>${kt}</td><td class="price">$${r.price}</td></tr>`;
     }
     return `<tr style="opacity:0.5"><td class="slot">${slot}</td><td>—</td><td class="price">—</td></tr>`;
   }).join('');
@@ -1816,14 +2088,23 @@ function renderPlayerSearch(enableNominate = null) {
   );
   pool = pool.sort((a, b) => b.baseValue - a.baseValue).slice(0, 80);
 
+  const market = liveMarketFactor();
   $('#player-search-results').innerHTML = pool.map(p => {
     const canNom = enable;
+    const est = Math.max(1, Math.round(p.baseValue * market));
     return `<div class="player-row${canNom ? '' : ' disabled'}">
       <span><strong>${escapeHtml(p.name)}</strong> <span style="color:var(--muted)">${escapeHtml(p.team)}</span></span>
       <span class="pos">${p.posRank}</span>
+      <span class="val" title="Estimated auction value at the current market">${fmt$(est)}</span>
       <button data-pid="${p.id}" onclick="userNominate(${p.id})" ${canNom ? '' : 'disabled'}>Nominate</button>
     </div>`;
   }).join('');
+}
+
+/* Live market factor = money left in the room ÷ value of players still worth
+   buying. Rises when keepers pull studs (value) out faster than budget. */
+function liveMarketFactor() {
+  return totalBudgetRemaining() / Math.max(1, sumDraftableBaseValues());
 }
 
 window.userNominate = function (pid) {
@@ -1928,7 +2209,7 @@ function renderResults() {
       <table><tbody>
         ${sorted.map(r => `<tr>
           <td style="width:32px; color:var(--muted)">${r.slot}</td>
-          <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span></td>
+          <td>${escapeHtml(r.player.name)} <span style="color:var(--muted)">${r.player.posRank}</span>${r.keeper ? ' <span style="color:var(--accent); font-size:10px; font-weight:700">K</span>' : ''}</td>
           <td class="price">$${r.price}</td>
         </tr>`).join('')}
       </tbody></table>
@@ -1942,16 +2223,404 @@ function escapeHtml(s) {
 }
 
 /* ============================================================
+   KEEPER SETUP UI (setup screen)
+   ============================================================ */
+function initKeeperUI() {
+  // Restore custom team names first so every dropdown/label reflects them.
+  loadTeamNames();
+  // Restore the keepers you last had entered (auto-saved) so a page refresh
+  // doesn't lose them. If any were restored, open the card so you see them.
+  loadCurrentKeepers();
+  renderTeamNamesEditor();
+  populateKeeperTeamDropdown();
+  renderPresetSelect();
+  renderKeeperSearch();
+  renderKeeperList();
+  if (state.keepers.length) { const card = $('#keeper-card'); if (card) card.open = true; }
+
+  // Team-name editor: edit any team's name; team 0 stays in sync with the
+  // setup "Team name" field. Updates dropdown + keeper labels without
+  // re-rendering the grid (so focus isn't lost mid-type).
+  const tnGrid = $('#tn-grid');
+  if (tnGrid) tnGrid.addEventListener('input', (e) => {
+    const inp = e.target.closest('.tn-row input[data-idx]');
+    if (inp) setTeamName(parseInt(inp.dataset.idx, 10), inp.value, { fromGrid: true });
+  });
+  const tnReset = $('#tn-reset');
+  if (tnReset) tnReset.addEventListener('click', resetTeamNames);
+
+  // Saved-set controls
+  const saveBtn = $('#keeper-preset-save');
+  if (saveBtn) saveBtn.addEventListener('click', () => {
+    const nameInput = $('#keeper-preset-name');
+    saveKeeperPreset(nameInput.value.trim());
+  });
+  const loadBtn = $('#keeper-preset-load');
+  if (loadBtn) loadBtn.addEventListener('click', () => loadKeeperPreset($('#keeper-preset-select').value));
+  const delBtn = $('#keeper-preset-delete');
+  if (delBtn) delBtn.addEventListener('click', () => deleteKeeperPreset($('#keeper-preset-select').value));
+  const nameInput = $('#keeper-preset-name');
+  if (nameInput) nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveKeeperPreset(nameInput.value.trim()); }
+  });
+
+  const search = $('#keeper-search');
+  if (search) search.addEventListener('input', renderKeeperSearch);
+  // Delegated clicks: read the player name from data-name, which the DOM has
+  // already decoded (so apostrophes like De'Von Achane match the database).
+  const results = $('#keeper-search-results');
+  if (results) results.addEventListener('click', (e) => {
+    const opt = e.target.closest('.keeper-opt[data-name]');
+    if (opt) window.addKeeper(opt.dataset.name);
+  });
+  const list = $('#keeper-list');
+  if (list) {
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.kp-remove[data-name]');
+      if (btn) window.removeKeeper(btn.dataset.name);
+    });
+    // Commit price edits on blur / Enter (change), not each keystroke, so the
+    // re-render doesn't steal focus mid-type.
+    list.addEventListener('change', (e) => {
+      const inp = e.target.closest('.kp-edit[data-name]');
+      if (inp) window.editKeeperPrice(inp.dataset.name, inp.value);
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.closest('.kp-edit')) e.target.blur();
+    });
+  }
+  // Two-way sync: editing the setup "Team name" field updates team 0 here too.
+  const nameField = $('#user-team-name');
+  if (nameField) nameField.addEventListener('input', () =>
+    setTeamName(0, nameField.value, { fromField: true }));
+}
+
+/* ---------- Team names ---------- */
+const TEAM_NAMES_KEY = 'mdas_team_names';
+
+function renderTeamNamesEditor() {
+  const grid = $('#tn-grid');
+  if (!grid) return;
+  ensurePlannedTeams();
+  grid.innerHTML = Array.from({ length: NUM_TEAMS }, (_, i) =>
+    `<div class="tn-row${i === 0 ? ' tn-you' : ''}">
+       <span class="tn-num">${i === 0 ? 'You' : (i + 1)}</span>
+       <input type="text" maxlength="32" data-idx="${i}" value="${escapeHtml(teamNameForIndex(i))}"
+              placeholder="${i === 0 ? 'Your team' : 'Team ' + (i + 1)}">
+     </div>`
+  ).join('');
+}
+
+/* Update a team's name. opts.fromGrid / opts.fromField avoid clobbering the
+   element the user is actively typing in. */
+function setTeamName(idx, rawName, opts = {}) {
+  const name = String(rawName);
+  if (idx === 0) {
+    state.userTeamName = name;
+    if (!opts.fromField) { const f = $('#user-team-name'); if (f) f.value = name; }
+  } else {
+    ensurePlannedTeams();
+    state.plannedCpuNames[idx - 1] = name;
+  }
+  if (!opts.fromGrid) {
+    const gridInput = document.querySelector(`#tn-grid .tn-row input[data-idx="${idx}"]`);
+    if (gridInput && gridInput.value !== name) gridInput.value = name;
+  }
+  persistTeamNames();
+  populateKeeperTeamDropdown();   // refresh "assign to" options
+  renderKeeperList();             // refresh grouped-by-team labels
+}
+
+function resetTeamNames() {
+  if (!confirm('Reset all team names? Your team name and keepers are kept; opponent names go back to the random defaults.')) return;
+  state.plannedCpuNames = shuffle(CPU_TEAM_NAMES).slice(0, NUM_TEAMS - 1);
+  lsSet(TEAM_NAMES_KEY, '');   // clear saved override
+  persistTeamNames();          // re-save current (user name + fresh cpu names)
+  renderTeamNamesEditor();
+  populateKeeperTeamDropdown();
+  renderKeeperList();
+  toast('Opponent names reset.');
+}
+
+function persistTeamNames() {
+  ensurePlannedTeams();
+  lsSet(TEAM_NAMES_KEY, JSON.stringify({
+    user: state.userTeamName || '',
+    cpu: state.plannedCpuNames
+  }));
+}
+
+function loadTeamNames() {
+  const raw = lsGet(TEAM_NAMES_KEY);
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch (e) { return; }
+  if (!data || typeof data !== 'object') return;
+  if (Array.isArray(data.cpu) && data.cpu.length === NUM_TEAMS - 1) {
+    state.plannedCpuNames = data.cpu.map(n => String(n || ''));
+  }
+  if (typeof data.user === 'string' && data.user.trim()) {
+    state.userTeamName = data.user;
+    const f = $('#user-team-name');
+    if (f) f.value = data.user;
+  }
+}
+
+/* ---------- Keeper persistence (localStorage) ----------
+   Two things are stored:
+   • the CURRENT keeper list, saved on every change and restored on load, so a
+     refresh never loses what you typed.
+   • named PRESETS, so you can keep several league setups and swap between them.
+   All access is wrapped — private-mode / disabled storage degrades gracefully. */
+const KEEPER_STORE_KEY = 'mdas_keepers_current';
+const KEEPER_PRESETS_KEY = 'mdas_keepers_presets';
+
+function lsGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, val); return true; } catch (e) { return false; }
+}
+
+/* Keep only entries that map to a real player, respecting per-team position
+   caps and no duplicates — guards against stale or hand-edited storage. */
+function sanitizeKeepers(arr) {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set();
+  const posCount = {};
+  const out = [];
+  for (const k of arr) {
+    if (!k || typeof k.name !== 'string') continue;
+    const player = PLAYERS_DB.find(p => p.name === k.name);
+    if (!player) continue;
+    if (seen.has(player.name)) continue;
+    let ti = parseInt(k.teamIndex, 10);
+    if (!(ti >= 0 && ti < NUM_TEAMS)) ti = 0;
+    const key = ti + '|' + player.pos;
+    posCount[key] = (posCount[key] || 0) + 1;
+    if (posCount[key] > POS_MAX[player.pos]) { posCount[key]--; continue; }
+    let price = parseInt(k.price, 10);
+    if (!price || price < 1) price = Math.max(1, Math.round(player.baseValue));
+    seen.add(player.name);
+    out.push({ teamIndex: ti, name: player.name, pos: player.pos, price });
+  }
+  return out;
+}
+
+function persistKeepers() {
+  lsSet(KEEPER_STORE_KEY, JSON.stringify(state.keepers));
+}
+function loadCurrentKeepers() {
+  const raw = lsGet(KEEPER_STORE_KEY);
+  if (!raw) return;
+  try { state.keepers = sanitizeKeepers(JSON.parse(raw)); } catch (e) { /* ignore */ }
+}
+
+function getPresets() {
+  const raw = lsGet(KEEPER_PRESETS_KEY);
+  if (!raw) return {};
+  try { const o = JSON.parse(raw); return (o && typeof o === 'object') ? o : {}; }
+  catch (e) { return {}; }
+}
+function setPresets(obj) { lsSet(KEEPER_PRESETS_KEY, JSON.stringify(obj)); }
+
+function renderPresetSelect() {
+  const sel = $('#keeper-preset-select');
+  const wrap = $('#keeper-presets');
+  if (!sel) return;
+  const presets = getPresets();
+  const names = Object.keys(presets).sort((a, b) => a.localeCompare(b));
+  const prev = sel.value;
+  sel.innerHTML = names.map(n =>
+    `<option value="${escapeHtml(n)}">${escapeHtml(n)} (${presets[n].length})</option>`
+  ).join('');
+  if (names.includes(prev)) sel.value = prev;
+  if (wrap) wrap.classList.toggle('no-presets', names.length === 0);
+}
+
+function saveKeeperPreset(name) {
+  if (!name) { toast('Name the set first.'); $('#keeper-preset-name').focus(); return; }
+  if (!state.keepers.length) { toast('Add some keepers before saving a set.'); return; }
+  const presets = getPresets();
+  const existed = Object.prototype.hasOwnProperty.call(presets, name);
+  presets[name] = state.keepers.map(k => ({ ...k }));
+  setPresets(presets);
+  renderPresetSelect();
+  $('#keeper-preset-select').value = name;
+  $('#keeper-preset-name').value = '';
+  toast(existed ? `Updated set “${name}”.` : `Saved set “${name}”.`);
+}
+
+function loadKeeperPreset(name) {
+  if (!name) return;
+  const presets = getPresets();
+  if (!presets[name]) { toast('That set no longer exists.'); renderPresetSelect(); return; }
+  state.keepers = sanitizeKeepers(presets[name]);
+  persistKeepers();
+  renderKeeperList();
+  renderKeeperSearch();
+  const card = $('#keeper-card'); if (card) card.open = true;
+  toast(`Loaded “${name}” (${state.keepers.length} keeper${state.keepers.length === 1 ? '' : 's'}).`);
+}
+
+function deleteKeeperPreset(name) {
+  if (!name) return;
+  const presets = getPresets();
+  if (!presets[name]) { renderPresetSelect(); return; }
+  if (!confirm(`Delete saved set “${name}”? This won't change your current keepers.`)) return;
+  delete presets[name];
+  setPresets(presets);
+  renderPresetSelect();
+  toast(`Deleted “${name}”.`);
+}
+
+function populateKeeperTeamDropdown() {
+  const sel = $('#keeper-team');
+  if (!sel) return;
+  ensurePlannedTeams();
+  const prev = sel.value;
+  sel.innerHTML = Array.from({ length: NUM_TEAMS }, (_, i) =>
+    `<option value="${i}">${escapeHtml(teamLabelForIndex(i))}</option>`
+  ).join('');
+  if (prev !== '') sel.value = prev;
+}
+
+function keeperTeamOpenSlots(teamIndex) {
+  const used = state.keepers.filter(k => k.teamIndex === teamIndex);
+  return ROSTER_SIZE - used.length;
+}
+function keeperTeamPosCount(teamIndex, pos) {
+  return state.keepers.filter(k => k.teamIndex === teamIndex && k.pos === pos).length;
+}
+function keeperTeamSpent(teamIndex) {
+  return state.keepers
+    .filter(k => k.teamIndex === teamIndex)
+    .reduce((s, k) => s + k.price, 0);
+}
+
+function renderKeeperSearch() {
+  const box = $('#keeper-search-results');
+  if (!box) return;
+  const q = ($('#keeper-search').value || '').trim().toLowerCase();
+  if (!q) { box.innerHTML = ''; return; }
+  const taken = new Set(state.keepers.map(k => k.name));
+  const pool = PLAYERS_DB
+    .filter(p => !taken.has(p.name) &&
+      (p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q)))
+    .sort((a, b) => b.baseValue - a.baseValue)
+    .slice(0, 12);
+  if (!pool.length) { box.innerHTML = `<div class="keeper-opt hint">No matching players</div>`; return; }
+  box.innerHTML = pool.map(p =>
+    `<div class="keeper-opt" data-name="${escapeHtml(p.name)}">
+      <span><strong>${escapeHtml(p.name)}</strong> <span class="hint">${escapeHtml(p.team)}</span></span>
+      <span class="pos">${p.posRank}</span>
+      <span class="hint">~${fmt$(p.baseValue)}</span>
+    </div>`
+  ).join('');
+}
+
+window.addKeeper = function (name) {
+  const player = PLAYERS_DB.find(p => p.name === name);
+  if (!player) return;
+  const teamIndex = parseInt($('#keeper-team').value, 10) || 0;
+  let price = parseInt($('#keeper-price').value, 10);
+  if (!price || price < 1) price = Math.max(1, Math.round(player.baseValue)); // default to market value
+
+  if (state.keepers.some(k => k.name === name)) { toast(`${name} is already a keeper.`); return; }
+  if (keeperTeamOpenSlots(teamIndex) <= 0) { toast('That team has no roster spots left.'); return; }
+  if (keeperTeamPosCount(teamIndex, player.pos) >= POS_MAX[player.pos]) {
+    toast(`That team can't keep another ${player.pos}.`); return;
+  }
+  // Leave at least $1 for every remaining roster slot on that team
+  const slotsAfter = keeperTeamOpenSlots(teamIndex) - 1;
+  if (keeperTeamSpent(teamIndex) + price > BUDGET - slotsAfter) {
+    toast(`Over budget — leave $1 per remaining slot (max ${fmt$(BUDGET - keeperTeamSpent(teamIndex) - slotsAfter)}).`);
+    return;
+  }
+
+  state.keepers.push({ teamIndex, name: player.name, pos: player.pos, price });
+  persistKeepers();
+  $('#keeper-search').value = '';
+  $('#keeper-price').value = '';
+  renderKeeperSearch();
+  renderKeeperList();
+};
+
+window.removeKeeper = function (name) {
+  state.keepers = state.keepers.filter(k => k.name !== name);
+  persistKeepers();
+  renderKeeperList();
+  renderKeeperSearch();
+};
+
+/* Edit the price of an already-added keeper, re-validating the team budget. */
+window.editKeeperPrice = function (name, raw) {
+  const k = state.keepers.find(x => x.name === name);
+  if (!k) return;
+  let price = parseInt(raw, 10);
+  if (!price || price < 1) price = 1;
+  // Leave at least $1 for every remaining roster slot on that team. This
+  // keeper already occupies a slot, so only the OTHER keepers' spend counts.
+  const otherSpent = state.keepers
+    .filter(x => x.teamIndex === k.teamIndex && x.name !== name)
+    .reduce((s, x) => s + x.price, 0);
+  const slotsAfter = keeperTeamOpenSlots(k.teamIndex) - 1;   // open slots exclude kept players
+  const maxPrice = BUDGET - otherSpent - slotsAfter;
+  if (price > maxPrice) {
+    toast(`Over budget — max ${fmt$(maxPrice)} for this keeper.`);
+    price = maxPrice;
+  }
+  k.price = price;
+  persistKeepers();
+  renderKeeperList();   // refresh totals and clamp the input if needed
+};
+
+function renderKeeperList() {
+  const el = $('#keeper-list');
+  if (!el) return;
+  if (!state.keepers.length) {
+    el.innerHTML = `<div class="keeper-empty">No keepers yet. Leave this empty for a standard draft.</div>`;
+    return;
+  }
+  const byTeam = {};
+  state.keepers.forEach(k => { (byTeam[k.teamIndex] = byTeam[k.teamIndex] || []).push(k); });
+  el.innerHTML = Object.keys(byTeam)
+    .sort((a, b) => a - b)
+    .map(ti => {
+      const spent = keeperTeamSpent(+ti);
+      const rows = byTeam[ti]
+        .sort((a, b) => b.price - a.price)
+        .map(k => `<div class="keeper-item">
+          <span class="kp-name">${escapeHtml(k.name)} <span style="color:var(--muted)">${k.pos}</span></span>
+          <span class="kp-price">$<input class="kp-edit" type="number" min="1" max="199" value="${k.price}" data-name="${escapeHtml(k.name)}" title="Edit keeper price"></span>
+          <button class="kp-remove" title="Remove" data-name="${escapeHtml(k.name)}">&times;</button>
+        </div>`).join('');
+      return `<div class="keeper-team-group">
+        <h4>${escapeHtml(teamLabelForIndex(+ti))} <span style="color:var(--muted); font-weight:400">— ${fmt$(spent)} spent · ${fmt$(BUDGET - spent)} left</span></h4>
+        ${rows}
+      </div>`;
+    }).join('');
+}
+
+/* ============================================================
    EVENT WIRING
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
+  initKeeperUI();
   $('#start-draft-btn').addEventListener('click', startDraft);
   $('#pause-btn').addEventListener('click', togglePause);
   $('#speed-toggle').addEventListener('click', toggleSpeed);
   $('#end-draft-btn').addEventListener('click', autoFinishDraft);
   $('#player-search').addEventListener('input', () => renderPlayerSearch());
   $('#pos-filter').addEventListener('change', () => renderPlayerSearch());
-  $('#email-results-btn').addEventListener('click', emailResults);
+  // Social share buttons
+  document.querySelectorAll('.share-btn').forEach(btn =>
+    btn.addEventListener('click', () => shareResults(btn.dataset.net)));
+  const nativeBtn = $('#share-native-btn');
+  if (nativeBtn && navigator.share) {
+    nativeBtn.style.display = '';                 // reveal only where supported (mostly mobile)
+    nativeBtn.addEventListener('click', nativeShare);
+  }
   $('#csv-download-btn').addEventListener('click', downloadCsv);
   $('#new-draft-btn').addEventListener('click', () => location.reload());
   document.addEventListener('keydown', (e) => {
@@ -1998,7 +2667,6 @@ async function startDraft() {
   btn.textContent = 'Loading values…';
   const name = $('#user-team-name').value.trim() || 'Your Team';
   state.userTeamName = name;
-  state.userEmail = $('#user-email').value.trim();
   state.paceMult = 1;            // realistic pacing (use the in-draft Fast-Forward to speed up)
   state.nominationTimerSec = 30; // default nomination timer
   updateSpeedToggleLabel();
