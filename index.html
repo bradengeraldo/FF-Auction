@@ -919,6 +919,13 @@ async function initDraft() {
   // Rank players by value so strategy profiles can tell elites from filler
   attachOverallRanks(state.players);
 
+  // Normalize the value spread so prices form a fuller bell curve around the
+  // median instead of a handful of stars soaking up every budget. Values above
+  // the pivot are compressed toward it (order preserved, so ranks are
+  // unchanged); the market factor then rebalances total spend back to the
+  // league budget, which lifts the middle rounds as the top comes down.
+  normalizeValueSpread(state.players);
+
   // build 12 teams (user is index 0). Names are fixed at setup (and editable in
   // the keeper card) so the keeper UI and the live draft agree on who's who.
   ensurePlannedTeams();
@@ -1262,6 +1269,34 @@ function assignStrategies(teams) {
      team_factor   = team.budget / max(team.budget)  // among eligible teams
      valuation = max(1, round(base * market_factor * team_factor))
    ============================================================ */
+/* Value-spread normalization. Real ranking values are steeply top-heavy (an
+   elite RB is worth ~$69 while hundreds of players sit at $1), which makes a few
+   stars eat most of every budget. We soft-compress values above a pivot with a
+   sub-1 exponent so the top tier comes down while the median rises — the result
+   is a fuller bell curve around the median. Ordering is strictly preserved, so
+   overall ranks and elite/filler detection are unaffected. Because the market
+   factor is budget ÷ (sum of values still to buy), it automatically rebalances
+   total spend back to the league budget, pushing the money the top no longer
+   commands into the middle rounds. */
+const NORM_PIVOT = 8;         // values at/below this are left as-is
+// The compression exponent is picked fresh each draft, so the market runs a
+// little differently every time — some drafts the stars stay pricey, others
+// they come cheaper and the middle gets richer. The range is tuned so the top
+// studs average roughly $40 (at the low end) to $55 (at the high end).
+const NORM_EXP_MIN = 0.60;
+const NORM_EXP_MAX = 0.85;
+function normalizeValueSpread(players) {
+  const exp = NORM_EXP_MIN + Math.random() * (NORM_EXP_MAX - NORM_EXP_MIN);
+  for (const p of players) {
+    const base = p.baseValue;
+    if (base <= NORM_PIVOT) continue;
+    const nv = NORM_PIVOT * Math.pow(base / NORM_PIVOT, exp);
+    // Scale volatility with the value so relative swing is preserved.
+    if (p.stdDev) p.stdDev *= nv / base;
+    p.baseValue = Math.round(nv * 100) / 100;
+  }
+}
+
 function startersNeeded(team, pos) {
   // How many starters at this pos the team still needs
   const req = { QB: 1, RB: 2, WR: 2, TE: 1, DST: 1, K: 1 }[pos] || 0;
